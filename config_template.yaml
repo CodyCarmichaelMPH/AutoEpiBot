@@ -1,0 +1,51 @@
+# AutoEpiBot Configuration Template
+# Copy this file to config.yaml and update with your settings
+
+api:
+  base_url: "https://your-essence-instance.com"
+  username: "your_username"
+  password: "your_password"
+
+syndromes:
+  - name: "Influenza-like Illness"
+    ccddCategory: "cdc"
+    datasource: "va"
+    medical_grouping: "influenza"
+    cc_and_discharge: "true"
+    multi_detector: "true"
+    
+  - name: "Gastrointestinal"
+    ccddCategory: "cdc"
+    datasource: "va"
+    medical_grouping: "gastrointestinal"
+    cc_and_discharge: "true"
+    multi_detector: "true"
+    
+  - name: "Respiratory"
+    ccddCategory: "cdc"
+    datasource: "va"
+    medical_grouping: "respiratory"
+    cc_and_discharge: "true"
+    multi_detector: "true"
+
+validation:
+  historical_days: 30
+  z_score_threshold: 2.0
+  min_count_threshold: 5
+
+output:
+  report_folder: "reports"
+  log_folder: "logs"
+  email_enabled: false
+
+email:
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  username: "your_email@gmail.com"
+  password: "your_app_password"
+  recipients: ["recipient@example.com"]
+
+query_params:
+  percentParam: "noPercent"
+  datatype: "ed"
+  timeResolution: "day" 

@@ -1,0 +1,60 @@
+# R specific files
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+*.Rprofile
+
+# Log files
+logs/*.log
+*.log
+
+# Documents folder (contains sensitive information)
+Documents/
+
+# Reports and outputs
+reports/
+output/
+*.html
+*.pdf
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+*.json
+*.rds
+*.RData
+
+# Configuration files with sensitive data
+config.yaml
+*.env
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package files
+*.tar.gz
+*.zip
+
+# Cache files
+.cache/
+cache/
+
+# Backup files
+*.bak
+*.backup 
