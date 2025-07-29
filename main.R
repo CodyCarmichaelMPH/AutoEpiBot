@@ -20,11 +20,11 @@ suppressPackageStartupMessages({
 })
 
 # Source all script modules
+source("scripts/helpers/logging.R")
 source("scripts/pull_timeseries.R")
 source("scripts/validate_alert.R")
 source("scripts/generate_report.R")
 source("scripts/send_email.R")
-source("scripts/helpers/logging.R")
 
 # Parse command line arguments
 parse_args <- function() {
@@ -143,7 +143,7 @@ validate_config <- function(config) {
   dir.create(config$output$report_folder, recursive = TRUE, showWarnings = FALSE)
   dir.create(config$output$log_folder, recursive = TRUE, showWarnings = FALSE)
   
-  log_info("Configuration validated successfully")
+  # Don't log here - logging will be initialized later
 }
 
 # Calculate date range based on mode
@@ -160,7 +160,7 @@ calculate_date_range <- function(config) {
   start_date_api <- format(start_date, "%d%b%Y")
   end_date_api <- format(end_date, "%d%b%Y")
   
-  log_info(paste("Date range:", start_date_api, "to", end_date_api))
+  # Don't log here - logging will be initialized later
   
   return(list(
     start_date = start_date,

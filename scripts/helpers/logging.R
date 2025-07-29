@@ -36,7 +36,8 @@ init_logging <- function(config) {
       # No log rotation needed for single CSV file
   }
   
-  log_info("Logging system initialized")
+  # Use cat instead of log_info to avoid circular dependency
+  cat("Logging system initialized\n")
 }
 
 # Get current timestamp
@@ -69,25 +70,25 @@ write_log <- function(level, message) {
 
 # Log levels
 log_debug <- function(message) {
-  if (log_config$level %in% c("DEBUG")) {
+  if (!is.null(log_config$level) && log_config$level %in% c("DEBUG")) {
     write_log("DEBUG", message)
   }
 }
 
 log_info <- function(message) {
-  if (log_config$level %in% c("DEBUG", "INFO")) {
+  if (!is.null(log_config$level) && log_config$level %in% c("DEBUG", "INFO")) {
     write_log("INFO", message)
   }
 }
 
 log_warn <- function(message) {
-  if (log_config$level %in% c("DEBUG", "INFO", "WARN")) {
+  if (!is.null(log_config$level) && log_config$level %in% c("DEBUG", "INFO", "WARN")) {
     write_log("WARN", message)
   }
 }
 
 log_error <- function(message) {
-  if (log_config$level %in% c("DEBUG", "INFO", "WARN", "ERROR")) {
+  if (!is.null(log_config$level) && log_config$level %in% c("DEBUG", "INFO", "WARN", "ERROR")) {
     write_log("ERROR", message)
   }
 }

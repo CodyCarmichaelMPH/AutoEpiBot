@@ -34,12 +34,29 @@ AutoEpiBot is a comprehensive R-based system for automated syndromic surveillanc
 
 ## Quick Start
 
-### Prerequisites
+### 🚀 For New Users (Recommended)
+
+**Option 1: GUI Interface (Most User-Friendly)**
+1. **Double-click `launch_gui.bat`** - Opens a modern GUI interface
+2. **Click "🔧 Setup Wizard"** - Follow the guided setup
+3. **Click "🔄 Run Daily Check"** - Start monitoring alerts
+
+**Option 2: Menu-Driven Interface**
+1. **Double-click `setup_autoeipbot.bat`** - Run the setup wizard
+2. **Double-click `run_autoeipbot.bat`** - Opens a menu-driven interface
+3. **Select option 1** - Run daily alert check
+
+**Option 3: One-Click Daily Run**
+1. **Double-click `quick_run.bat`** - Runs daily check with one click
+
+### 🔧 For Advanced Users
+
+**Prerequisites:**
 - R 4.0+ with required packages
 - Access to ESSENCE API
 - Windows PowerShell (for setup scripts)
 
-### Installation
+**Installation:**
 
 1. **Clone the repository**
    ```bash

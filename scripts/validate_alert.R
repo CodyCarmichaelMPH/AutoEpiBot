@@ -176,14 +176,14 @@ load_alert_log <- function(config) {
     tryCatch({
       log_data <- read.csv(log_file_path, stringsAsFactors = FALSE)
       log_data$date <- as.Date(log_data$date)
-      log_info(paste("Loaded alert log with", nrow(log_data), "entries"))
+      # Don't log here - logging will be initialized later
       return(log_data)
     }, error = function(e) {
-      log_error(paste("Error loading alert log:", e$message))
+      # Don't log here - logging will be initialized later
       return(data.frame())
     })
   } else {
-    log_info("No existing alert log found, creating new one")
+    # Don't log here - logging will be initialized later
     return(data.frame())
   }
 }
