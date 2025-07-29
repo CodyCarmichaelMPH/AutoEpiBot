@@ -3,6 +3,7 @@
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName Microsoft.VisualBasic
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
@@ -50,11 +51,21 @@ function Update-Status {
 
 # Function to run R script
 function Run-RScript {
-    param($args)
+    param([string]$arguments)
     Update-Status "Running AutoEpiBot..." "Blue"
     
     try {
-        $process = Start-Process -FilePath "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" -ArgumentList $args -Wait -PassThru -NoNewWindow
+        $rscriptPath = "C:\Program Files\R\R-4.5.1\bin\Rscript.exe"
+        
+        # Check if R is installed
+        if (-not (Test-Path $rscriptPath)) {
+            throw "R is not installed or not found at expected location"
+        }
+        
+        # Split arguments properly
+        $argArray = $arguments -split '\s+'
+        
+        $process = Start-Process -FilePath $rscriptPath -ArgumentList $argArray -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
             Update-Status "Completed successfully!" "Green"
             [System.Windows.Forms.MessageBox]::Show("AutoEpiBot completed successfully!", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
@@ -75,7 +86,7 @@ $buttonWidth = 200
 
 # Daily Check Button
 $dailyButton = New-Object System.Windows.Forms.Button
-$dailyButton.Text = "🔄 Run Daily Check"
+$dailyButton.Text = "Run Daily Check"
 $dailyButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $dailyButton.Location = New-Object System.Drawing.Point(50, $buttonY)
 $dailyButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -85,7 +96,7 @@ $form.Controls.Add($dailyButton)
 
 # Test Run Button
 $testButton = New-Object System.Windows.Forms.Button
-$testButton.Text = "🧪 Test Run"
+$testButton.Text = "Test Run"
 $testButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $testButton.Location = New-Object System.Drawing.Point(300, $buttonY)
 $testButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -95,16 +106,16 @@ $form.Controls.Add($testButton)
 
 # Manual Check Button
 $manualButton = New-Object System.Windows.Forms.Button
-$manualButton.Text = "📅 Manual Date Range"
+$manualButton.Text = "Manual Date Range"
 $manualButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $manualButton.Location = New-Object System.Drawing.Point(50, ($buttonY + 60))
 $manualButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
 $manualButton.BackColor = [System.Drawing.Color]::LightGreen
 $manualButton.Add_Click({
-    $startDate = [System.Windows.Forms.MessageBox]::Show("Enter start date (YYYY-MM-DD):", "Start Date", [System.Windows.Forms.MessageBoxButtons]::OKCancel, [System.Windows.Forms.MessageBoxIcon]::Question)
-    if ($startDate -eq "OK") {
-        $endDate = [System.Windows.Forms.MessageBox]::Show("Enter end date (YYYY-MM-DD):", "End Date", [System.Windows.Forms.MessageBoxButtons]::OKCancel, [System.Windows.Forms.MessageBoxIcon]::Question)
-        if ($endDate -eq "OK") {
+    $startDate = [Microsoft.VisualBasic.Interaction]::InputBox("Enter start date (YYYY-MM-DD):", "Start Date", "2025-07-01")
+    if ($startDate -ne "") {
+        $endDate = [Microsoft.VisualBasic.Interaction]::InputBox("Enter end date (YYYY-MM-DD):", "End Date", "2025-07-20")
+        if ($endDate -ne "") {
             Run-RScript "main.R --mode manual --startDate $startDate --endDate $endDate"
         }
     }
@@ -113,7 +124,7 @@ $form.Controls.Add($manualButton)
 
 # Install Packages Button
 $installButton = New-Object System.Windows.Forms.Button
-$installButton.Text = "📦 Install Packages"
+$installButton.Text = "Install Packages"
 $installButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $installButton.Location = New-Object System.Drawing.Point(300, ($buttonY + 60))
 $installButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -123,7 +134,7 @@ $form.Controls.Add($installButton)
 
 # Open Reports Button
 $reportsButton = New-Object System.Windows.Forms.Button
-$reportsButton.Text = "📊 Open Reports"
+$reportsButton.Text = "Open Reports"
 $reportsButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $reportsButton.Location = New-Object System.Drawing.Point(50, ($buttonY + 120))
 $reportsButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -139,7 +150,7 @@ $form.Controls.Add($reportsButton)
 
 # Open Logs Button
 $logsButton = New-Object System.Windows.Forms.Button
-$logsButton.Text = "📋 Open Logs"
+$logsButton.Text = "Open Logs"
 $logsButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $logsButton.Location = New-Object System.Drawing.Point(300, ($buttonY + 120))
 $logsButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -155,7 +166,7 @@ $form.Controls.Add($logsButton)
 
 # Configure Button
 $configButton = New-Object System.Windows.Forms.Button
-$configButton.Text = "⚙️ Configure"
+$configButton.Text = "Configure"
 $configButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $configButton.Location = New-Object System.Drawing.Point(50, ($buttonY + 180))
 $configButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -171,7 +182,7 @@ $form.Controls.Add($configButton)
 
 # Setup Button
 $setupButton = New-Object System.Windows.Forms.Button
-$setupButton.Text = "🔧 Setup Wizard"
+$setupButton.Text = "Setup Wizard"
 $setupButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $setupButton.Location = New-Object System.Drawing.Point(300, ($buttonY + 180))
 $setupButton.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
@@ -187,7 +198,7 @@ $form.Controls.Add($setupButton)
 
 # Exit Button
 $exitButton = New-Object System.Windows.Forms.Button
-$exitButton.Text = "❌ Exit"
+$exitButton.Text = "Exit"
 $exitButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $exitButton.Location = New-Object System.Drawing.Point(175, ($buttonY + 240))
 $exitButton.Size = New-Object System.Drawing.Size(100, 35)
