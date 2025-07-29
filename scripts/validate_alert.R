@@ -169,18 +169,8 @@ is_alert_processed <- function(syndrome_name, alert_date, alert_log) {
 
 # Load alert log
 load_alert_log <- function(config) {
-  # Determine log file path based on format
-  if (!is.null(config$output$log_format) && config$output$log_format == "csv_by_year") {
-    current_year <- format(Sys.Date(), "%Y")
-    log_prefix <- if (!is.null(config$output$system_log_prefix)) {
-      config$output$system_log_prefix
-    } else {
-      "autoeipbot"
-    }
-    log_file_path <- file.path(config$output$log_folder, paste0(log_prefix, "_", current_year, ".csv"))
-  } else {
-    log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
-  }
+  # Use single CSV file for all alerts
+  log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
   
   if (file.exists(log_file_path)) {
     tryCatch({
@@ -211,18 +201,8 @@ log_alert_action <- function(syndrome_name, alert_date, alert_color, action, con
     stringsAsFactors = FALSE
   )
   
-  # Determine log file path based on format
-  if (!is.null(config$output$log_format) && config$output$log_format == "csv_by_year") {
-    current_year <- format(Sys.Date(), "%Y")
-    log_prefix <- if (!is.null(config$output$system_log_prefix)) {
-      config$output$system_log_prefix
-    } else {
-      "autoeipbot"
-    }
-    log_file_path <- file.path(config$output$log_folder, paste0(log_prefix, "_", current_year, ".csv"))
-  } else {
-    log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
-  }
+  # Use single CSV file for all alerts
+  log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
   
   # Append to existing log or create new
   if (file.exists(log_file_path)) {

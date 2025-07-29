@@ -33,10 +33,7 @@ init_logging <- function(config) {
     log_filename <- paste0(log_prefix, "_", format(Sys.Date(), "%Y-%m-%d"), ".log")
     log_config$log_file <<- file.path(config$output$log_folder, log_filename)
     
-    # Clean up old log files if max_log_files is specified
-    if (!is.null(config$output$max_log_files)) {
-      cleanup_old_logs(config$output$log_folder, log_prefix, config$output$max_log_files)
-    }
+      # No log rotation needed for single CSV file
   }
   
   log_info("Logging system initialized")
@@ -345,18 +342,8 @@ log_report_accessed <- function(report_path, access_type = "viewed") {
 
 # Get report statistics
 get_report_statistics <- function(config) {
-  # Determine log file path based on format
-  if (!is.null(config$output$log_format) && config$output$log_format == "csv_by_year") {
-    current_year <- format(Sys.Date(), "%Y")
-    log_prefix <- if (!is.null(config$output$system_log_prefix)) {
-      config$output$system_log_prefix
-    } else {
-      "autoeipbot"
-    }
-    log_file_path <- file.path(config$output$log_folder, paste0(log_prefix, "_", current_year, ".csv"))
-  } else {
-    log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
-  }
+  # Use single CSV file for all alerts
+  log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
   
   if (file.exists(log_file_path)) {
     tryCatch({
@@ -384,18 +371,8 @@ get_report_statistics <- function(config) {
 
 # List available reports
 list_available_reports <- function(config, syndrome = NULL, date_range = NULL) {
-  # Determine log file path based on format
-  if (!is.null(config$output$log_format) && config$output$log_format == "csv_by_year") {
-    current_year <- format(Sys.Date(), "%Y")
-    log_prefix <- if (!is.null(config$output$system_log_prefix)) {
-      config$output$system_log_prefix
-    } else {
-      "autoeipbot"
-    }
-    log_file_path <- file.path(config$output$log_folder, paste0(log_prefix, "_", current_year, ".csv"))
-  } else {
-    log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
-  }
+  # Use single CSV file for all alerts
+  log_file_path <- file.path(config$output$log_folder, config$output$alert_log_file)
   
   if (file.exists(log_file_path)) {
     tryCatch({
