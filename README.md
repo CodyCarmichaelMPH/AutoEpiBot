@@ -48,24 +48,60 @@ AutoEpiBot is a comprehensive R-based system for automated syndromic surveillanc
    ```
 
 2. **Install R packages**
-   ```bash
-   Rscript install_packages.R
+   
+   **Option A: Using PowerShell (Recommended)**
+   ```powershell
+   # Find R installation and run package installation
+   $rPath = Get-ChildItem "C:\Program Files\R" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+   & "$($rPath.FullName)\bin\Rscript.exe" install_packages.R
+   ```
+   
+   **Option B: Using Command Prompt**
+   ```cmd
+   # Find R installation and run package installation
+   "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" install_packages.R
+   ```
+   
+   **Option C: Using R GUI**
+   ```r
+   # Open R GUI and run:
+   source("install_packages.R")
    ```
 
 3. **Configure the system**
-   ```bash
+   ```cmd
    # Copy the template configuration
    copy config_template.yaml config.yaml
    # Edit config.yaml with your settings
    ```
 
 4. **Run the system**
-   ```bash
+   
+   **Option A: Using PowerShell**
+   ```powershell
    # Test run
-   Rscript main.R --mode rolling --dry-run
+   & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling --dry-run
    
    # Production run
-   Rscript main.R --mode rolling
+   & "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling
+   ```
+   
+   **Option B: Using Command Prompt**
+   ```cmd
+   # Test run
+   "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling --dry-run
+   
+   # Production run
+   "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling
+   ```
+   
+   **Option C: Using the provided batch files (after setup)**
+   ```cmd
+   # Run the setup script first
+   powershell -ExecutionPolicy Bypass -File scripts\windows11_setup.ps1
+   
+   # Then use the created batch files
+   run_manual.bat
    ```
 
 ## Configuration
@@ -106,15 +142,29 @@ validation:
 - `--date YYYY-MM-DD`: Analyze specific date
 
 ### Example Commands
-```bash
+
+**Using PowerShell (Recommended)**
+```powershell
 # Test the system
-Rscript main.R --mode rolling --dry-run
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling --dry-run
 
 # Run for specific date
-Rscript main.R --mode rolling --date 2024-01-15
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling --date 2024-01-15
 
 # Production run
-Rscript main.R --mode rolling
+& "C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling
+```
+
+**Using Command Prompt**
+```cmd
+# Test the system
+"C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling --dry-run
+
+# Run for specific date
+"C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling --date 2024-01-15
+
+# Production run
+"C:\Program Files\R\R-4.5.1\bin\Rscript.exe" main.R --mode rolling
 ```
 
 ## Report Features
@@ -193,6 +243,34 @@ The system uses multiple criteria for alert validation:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Troubleshooting
+
+### Common Windows Issues
+
+**"Rscript is not recognized"**
+- R is not in your system PATH
+- Use the full path: `"C:\Program Files\R\R-4.5.1\bin\Rscript.exe"`
+- Or use PowerShell with automatic R detection
+
+**"Execution Policy Error"**
+- Run PowerShell as Administrator
+- Execute: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+**"R Version Not Found"**
+- Check your R installation path: `dir "C:\Program Files\R"`
+- Update the path in commands to match your R version
+
+**"Package Installation Fails"**
+- Ensure internet connection
+- Try using R GUI: `source("install_packages.R")`
+- Check R version compatibility (R 4.0+ required)
+
+### Finding Your R Installation
+```powershell
+# PowerShell command to find R installations
+Get-ChildItem "C:\Program Files\R" -Directory | Sort-Object Name -Descending
+```
 
 ## Support
 
