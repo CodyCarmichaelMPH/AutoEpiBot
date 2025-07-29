@@ -42,43 +42,37 @@ parse_args <- function() {
   while (i <= length(args)) {
     arg <- args[i]
     
-    switch(arg,
-      "--mode" = {
-        if (i + 1 <= length(args)) {
-          config$mode <- args[i + 1]
-          i <- i + 1
-        }
-      },
-      "--startDate" = {
-        if (i + 1 <= length(args)) {
-          config$startDate <- args[i + 1]
-          i <- i + 1
-        }
-      },
-      "--endDate" = {
-        if (i + 1 <= length(args)) {
-          config$endDate <- args[i + 1]
-          i <- i + 1
-        }
-      },
-      "--dry-run" = {
-        config$dry_run <- TRUE
-      },
-      "--help" = {
-        cat("AutoEpiBot - NSSP ESSENCE Alert Automation\n")
-        cat("Usage:\n")
-        cat("  Rscript main.R --mode rolling\n")
-        cat("  Rscript main.R --mode manual --startDate 2025-07-01 --endDate 2025-07-20\n")
-        cat("  Rscript main.R --dry-run\n")
-        cat("Options:\n")
-        cat("  --mode        Execution mode: 'rolling' or 'manual'\n")
-        cat("  --startDate   Start date (YYYY-MM-DD format, manual mode only)\n")
-        cat("  --endDate     End date (YYYY-MM-DD format, manual mode only)\n")
-        cat("  --dry-run     Run without sending emails or creating reports\n")
-        cat("  --help        Show this help message\n")
-        quit(status = 0)
+    if (arg == "--mode") {
+      if (i + 1 <= length(args)) {
+        config$mode <- args[i + 1]
+        i <- i + 1
       }
-    )
+    } else if (arg == "--startDate") {
+      if (i + 1 <= length(args)) {
+        config$startDate <- args[i + 1]
+        i <- i + 1
+      }
+    } else if (arg == "--endDate") {
+      if (i + 1 <= length(args)) {
+        config$endDate <- args[i + 1]
+        i <- i + 1
+      }
+    } else if (arg == "--dry-run") {
+      config$dry_run <- TRUE
+    } else if (arg == "--help") {
+      cat("AutoEpiBot - NSSP ESSENCE Alert Automation\n")
+      cat("Usage:\n")
+      cat("  Rscript main.R --mode rolling\n")
+      cat("  Rscript main.R --mode manual --startDate 2025-07-01 --endDate 2025-07-20\n")
+      cat("  Rscript main.R --dry-run\n")
+      cat("Options:\n")
+      cat("  --mode        Execution mode: 'rolling' or 'manual'\n")
+      cat("  --startDate   Start date (YYYY-MM-DD format, manual mode only)\n")
+      cat("  --endDate     End date (YYYY-MM-DD format, manual mode only)\n")
+      cat("  --dry-run     Run without sending emails or creating reports\n")
+      cat("  --help        Show this help message\n")
+      quit(status = 0)
+    }
     i <- i + 1
   }
   
