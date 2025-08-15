@@ -1,0 +1,169 @@
+presented_name,Syndrome_Snippet
+Acute Hepatitis B V1,acute%20hepatitis%20b%20v1
+Acute Rabies V1,acute%20rabies%20v1
+Air Quality-related Respiratory Illness V1,air%20quality-related%20respiratory%20illness%20v1
+All Animal Bites V1,all%20animal%20bites%20v1
+Traffic Related V1,%20traffic%20related%20v1
+All Traffic Related V2,all%20traffic%20related%20v2
+All-terrain Vehicle (atv) Related (tn Ci) V1,all-terrain%20vehicle%20(atv)%20related%20(tn%20ci)%20v1
+All-terrain Vehicle (atv) Related V1,all-terrain%20vehicle%20(atv)%20related%20v1
+Anaplasmosis V1,anaplasmosis%20v1
+Anthrax V1,anthrax%20v1
+Babesiosis V1,babesiosis%20v1
+Brucellosis V1,brucellosis%20v1
+CDC Acute Flaccid Myelitis Dd V1,cdc%20acute%20flaccid%20myelitis%20dd%20v1
+CDC Acute Hepatitis C V1,cdc%20acute%20hepatitis%20c%20v1
+CDC Afm Broad V1-limit to Pediatric,cdc%20afm%20broad%20v1-limit%20to%20pediatric
+CDC Afm Narrow V1-limit to Pediatric,cdc%20afm%20narrow%20v1-limit%20to%20pediatric
+CDC Alcohol V1,cdc%20alcohol%20v1
+CDC All Drug Overdose V3 Parsed,cdc%20all%20drug%20overdose%20v3%20parsed
+CDC All Drug V1,cdc%20all%20drug%20v1
+CDC All Drug V2,cdc%20all%20drug%20v2
+CDC Anxiety Disorders (without F419) V1,cdc%20anxiety%20disorders%20(without%20f419)%20v1
+CDC Anxiety Disorders V1,cdc%20anxiety%20disorders%20v1
+CDC Assault Firearm Injury V1,cdc%20assault%20firearm%20injury%20v1
+CDC Asthma CCDD V1,cdc%20asthma%20ccdd%20v1
+CDC Attention-deficit Hyperactivity Disorders V1,cdc%20attention-deficit%20hyperactivity%20disorders%20v1
+CDC Benzodiazepine Overdose V1,cdc%20benzodiazepine%20overdose%20v1
+CDC Benzodiazepine Overdose V2 Parsed,cdc%20benzodiazepine%20overdose%20v2%20parsed
+CDC Bipolar Disorders V1,cdc%20bipolar%20disorders%20v1
+CDC Broad Acute Respiratory Dd V1,cdc%20broad%20acute%20respiratory%20dd%20v1
+CDC Chicken Pox V1,cdc%20chicken%20pox%20v1
+CDC Chickenpox V2,cdc%20chickenpox%20v2
+CDC Chronic Hepatitis C V1,cdc%20chronic%20hepatitis%20c%20v1
+CDC Cocaine Overdose V1,cdc%20cocaine%20overdose%20v1
+CDC Cocaine Overdose V2 Parsed,cdc%20cocaine%20overdose%20v2%20parsed
+CDC Coronavirus-dd V1,cdc%20coronavirus-dd%20v1
+CDC Covid-specific Dd V1,cdc%20covid-specific%20dd%20v1
+CDC Depressive Disorders V1,cdc%20depressive%20disorders%20v1
+CDC Diabetic Ketoacidosis V1,cdc%20diabetic%20ketoacidosis%20v1
+CDC Dialysis V1,cdc%20dialysis%20v1
+CDC Disruptive Behavioral and Impulse-control V1,cdc%20disruptive%20behavioral%20and%20impulse-control%20v1
+CDC Eating Disorders V1,cdc%20eating%20disorders%20v1
+CDC Evali V1-manually Limit to Ages 11-34,cdc%20evali%20v1-manually%20limit%20to%20ages%2011-34
+CDC Falls 65 and Older V1,cdc%20falls%2065%20and%20older%20v1
+CDC Fentanyl Overdose V1,cdc%20fentanyl%20overdose%20v1
+CDC Fentanyl Overdose V2 Parsed,cdc%20fentanyl%20overdose%20v2%20parsed
+CDC Firearm Injury V1,cdc%20firearm%20injury%20v1
+CDC Firearm Injury V2,cdc%20firearm%20injury%20v2
+CDC Food Poisoning V1,cdc%20food%20poisoning%20v1
+CDC Hand Foot and Mouth V1,cdc%20hand%20foot%20and%20mouth%20v1
+CDC Hepatitis A V1,cdc%20hepatitis%20a%20v1
+CDC Heroin Overdose V1,cdc%20heroin%20overdose%20v1
+CDC Heroin Overdose V2,cdc%20heroin%20overdose%20v2
+CDC Heroin Overdose V3,cdc%20heroin%20overdose%20v3
+CDC Heroin Overdose V4,cdc%20heroin%20overdose%20v4
+CDC Heroin Overdose V5 Parsed,cdc%20heroin%20overdose%20v5%20parsed
+CDC Hip Fracture 65 and Older V1,cdc%20hip%20fracture%2065%20and%20older%20v1
+CDC Influenza Dd V1,cdc%20influenza%20dd%20v1
+CDC Intentional Firearm Injury V1,cdc%20intentional%20firearm%20injury%20v1
+CDC Intimate Partner Violence V2,cdc%20intimate%20partner%20violence%20v2
+CDC Legionella V1,cdc%20legionella%20v1
+CDC Lyme Disease V1,cdc%20lyme%20disease%20v1
+CDC Measles CCDD V1,cdc%20measles%20ccdd%20v1
+CDC Medication Refill V1,cdc%20medication%20refill%20v1
+CDC Mental Health V1,cdc%20mental%20health%20v1
+CDC Methamphetamine Overdose V1 Parsed,cdc%20methamphetamine%20overdose%20v1%20parsed
+CDC Monkeypox Dd V1,cdc%20monkeypox%20dd%20v1
+CDC Motor Vehicle Crash Occupant Injury V1,cdc%20motor%20vehicle%20crash%20occupant%20injury%20v1
+CDC Myocarditis with No Specified Pathogen V1,cdc%20myocarditis%20with%20no%20specified%20pathogen%20v1
+CDC Obsessive-compulsive Disorders V1,cdc%20obsessive-compulsive%20disorders%20v1
+CDC Opioid Overdose V1,cdc%20opioid%20overdose%20v1
+CDC Opioid Overdose V2,cdc%20opioid%20overdose%20v2
+CDC Opioid Overdose V3,cdc%20opioid%20overdose%20v3
+CDC Opioid Overdose V4 Parsed,cdc%20opioid%20overdose%20v4%20parsed
+CDC Pedestrian Motor Vehicle Traffic Injury V1,cdc%20pedestrian%20motor%20vehicle%20traffic%20injury%20v1
+CDC Persons Experiencing Homelessness Dd V1,cdc%20persons%20experiencing%20homelessness%20dd%20v1
+CDC Pertussis V1,cdc%20pertussis%20v1
+CDC Pneumonia CCDD V1,cdc%20pneumonia%20ccdd%20v1
+CDC Pregnancy and Pregnancy Loss and Delivery V1,cdc%20pregnancy%20and%20pregnancy%20loss%20and%20delivery%20v1
+CDC Respiratory Syncytial Virus Dd V1,cdc%20respiratory%20syncytial%20virus%20dd%20v1
+CDC Respiratory Syncytial Virus V1,cdc%20respiratory%20syncytial%20virus%20v1
+CDC Schizophrenia Spectrum Disorders V1,cdc%20schizophrenia%20spectrum%20disorders%20v1
+CDC Seizure or Epilepsy V1,cdc%20seizure%20or%20epilepsy%20v1
+CDC Sexual Violence V3,cdc%20sexual%20violence%20v3
+CDC Shigella V1,cdc%20shigella%20v1
+CDC Small Pox V1,cdc%20small%20pox%20v1
+CDC Stimulant Overdose V4 Parsed,cdc%20stimulant%20overdose%20v4%20parsed
+CDC Stimulants V1,cdc%20stimulants%20v1
+CDC Stimulants V2,cdc%20stimulants%20v2
+CDC Stimulants V3,cdc%20stimulants%20v3
+CDC Suicidal Ideation V1,cdc%20suicidal%20ideation%20v1
+CDC Suicide Attempt V1,cdc%20suicide%20attempt%20v1
+CDC Suicide Attempt V2,cdc%20suicide%20attempt%20v2
+CDC Suspected Child Abuse and Neglect V1,cdc%20suspected%20child%20abuse%20and%20neglect%20v1
+CDC Suspected Sex Trafficking V1,cdc%20suspected%20sex%20trafficking%20v1
+CDC Synthetic Cannabinoids V1,cdc%20synthetic%20cannabinoids%20v1
+CDC Tic Disorders V1,cdc%20tic%20disorders%20v1
+CDC Tick Exposure V1,cdc%20tick%20exposure%20v1
+CDC Trauma and Stressor-related Disorders V1,cdc%20trauma%20and%20stressor-related%20disorders%20v1
+CDC Unintentional Carbon Monoxide Exposure V1,cdc%20unintentional%20carbon%20monoxide%20exposure%20v1
+CDC Unintentional Drowning V1,cdc%20unintentional%20drowning%20v1
+CDC Unintentional Firearm Injury V1,cdc%20unintentional%20firearm%20injury%20v1
+CDC Vaccine-associated Adverse Events V1,cdc%20vaccine-associated%20adverse%20events%20v1
+CDC Vaping and E Cig Injuries V1,cdc%20vaping%20and%20e%20cig%20injuries%20v1
+CDC Youth Violence V1,cdc%20youth%20violence%20v1
+Change in Taste or Smell V1,change%20in%20taste%20or%20smell%20v1
+Cholera V1,cholera%20v1
+Cli Cc with Cli Dd and Coronavirus Dd V1,cli%20cc%20with%20cli%20dd%20and%20coronavirus%20dd%20v1
+Cli Cc with Cli Dd and Coronavirus Dd V2,cli%20cc%20with%20cli%20dd%20and%20coronavirus%20dd%20v2
+Coccidioidomycosis V1,coccidioidomycosis%20v1
+Cognition and Central Nervous System Disability V1,cognition%20and%20central%20nervous%20system%20disability%20v1
+Cold Related Illness V1,cold%20related%20illness%20v1
+Cryptosporidiosis V1,cryptosporidiosis%20v1
+Dengue V1,dengue%20v1
+Ebola V1,ebola%20v1
+Ehrlichiosis V1,ehrlichiosis%20v1
+Fever and Cough-sob-diffbr Neg Influenza Dd V1,fever%20and%20cough-sob-diffbr%20neg%20influenza%20dd%20v1
+Fever and Cough-sob-diffbr Neg Influenza Dd V2,fever%20and%20cough-sob-diffbr%20neg%20influenza%20dd%20v2
+Fever and Cough-sob-diffbr V1,fever%20and%20cough-sob-diffbr%20v1
+Fever and Cough-sob-diffbr V2,fever%20and%20cough-sob-diffbr%20v2
+Fire and Smoke Inhalation V1,fire%20and%20smoke%20inhalation%20v1
+Foreign Travel,foreign%20travel
+Foreign Travel V2,foreign%20travel%20v2
+Giardiasis V1,giardiasis%20v1
+Hantavirus Infection V1,hantavirus%20infection%20v1
+Hearing Disability V1,hearing%20disability%20v1
+Heat Related Illness V1,heat%20related%20illness%20v1
+Heat Related Illness V2,heat%20related%20illness%20v2
+Hemolytic Uremic Syndrome (hus) V1,hemolytic%20uremic%20syndrome%20(hus)%20v1
+Homelessness V1,homelessness%20v1
+ILI CCDD Neg Coronavirus Dd V1,ili%20ccdd%20neg%20coronavirus%20dd%20v1
+ILI CCDD V1,ili%20ccdd%20v1
+ILI Neg Influenza Mention V1,ili%20neg%20influenza%20mention%20v1
+ILI Syndrome Neg Coronavirus Dd V1,ili%20syndrome%20neg%20coronavirus%20dd%20v1
+Intellectual and Developmental Disability V1,intellectual%20and%20developmental%20disability%20v1
+Intimate Partner Violence V1,intimate%20partner%20violence%20v1
+Leptospirosis V1,leptospirosis%20v1
+Long Covid Broad V1,long%20covid%20broad%20v1
+Long Covid Narrow V1,long%20covid%20narrow%20v1
+Malaria V1,malaria%20v1
+Marburg V1,marburg%20v1
+Marijuana V1,marijuana%20v1
+Marijuana V2,marijuana%20v2
+Marijuana V3,marijuana%20v3
+Meningococcal Disease V1,meningococcal%20disease%20v1
+Mobility Disability V1,mobility%20disability%20v1
+Mumps V1,mumps%20v1
+Norovirus V1,norovirus%20v1
+Overall Disability V1,overall%20disability%20v1
+Pertussis V2 CCDD Parsed,pertussis%20v2%20ccdd%20parsed
+Pertussis V2 Dd,pertussis%20v2%20dd
+Plague V1,plague%20v1
+Poliomyelitis V1,poliomyelitis%20v1
+Psittacosis V1,psittacosis%20v1
+Q Fever V1,q%20fever%20v1
+Rabies Pep Administered V1,rabies%20pep%20administered%20v1
+Recreational Boating Incidents V1,recreational%20boating%20incidents%20v1
+Sdc Disaster Related Mental Health V1,sdc%20disaster%20related%20mental%20health%20v1
+Sdc Suicide Related V1,sdc%20suicide%20related%20v1
+Self-care and Independent Living Disability V1,self-care%20and%20independent%20living%20disability%20v1
+Severe Asthma V1,severe%20asthma%20v1
+Sexual Violence V1,sexual%20violence%20v1
+Sexual Violence V2,sexual%20violence%20v2
+Specific Dev Behavioral Learning Disability V1,specific%20dev%20behavioral%20learning%20disability%20v1
+Spotted Fever Rickettsiosis V1,spotted%20fever%20rickettsiosis%20v1
+Trichinellosis V1,trichinellosis%20v1
+Tularemia V1,tularemia%20v1
+Vision Disability V1,vision%20disability%20v1
+Zika V1,zika%20v1

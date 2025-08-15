@@ -1,60 +1,51 @@
-# R specific files
+# AutoEpiBot .gitignore
+# Exclude data files and logs while keeping code and syndrome sheets
+
+# R Data files
+*.RData
+*.rdata
+.RData
+.Rhistory
+
+# CSV files (except in SyndromeSheets folder)
+*.csv
+!SyndromeSheets/*.csv
+
+# Log files and temporary data
+TestLogs/
+LogsFileLoc.RData
+InvestigateTSRecords.RData
+EmailStarterInfo.RData
+reportsData.RData
+
+# Settings and configuration (sensitive data)
+AutoEpi_Settings.RData
+AutoEpi_last_settings_path.txt
+
+# R temporary files
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
-*.Rproj
-*.Rprofile
-
-# Log files
-logs/*.log
-*.log
-
-# Documents folder (contains sensitive information)
-Documents/
-
-# Reports and outputs
-reports/
-output/
-*.html
-*.pdf
-
-# Temporary files
-*.tmp
-*.temp
-temp/
-tmp/
-
-# Data files
-*.csv
-*.xlsx
-*.xls
-*.json
-*.rds
-*.RData
-
-# Configuration files with sensitive data
-config.yaml
-*.env
-.env
 
 # IDE files
 .vscode/
-.idea/
-*.swp
-*.swo
+*.Rproj.user
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Package files
-*.tar.gz
-*.zip
+# Output directories (will be created at runtime)
+Reports/
+Logs/
 
-# Cache files
-.cache/
-cache/
+# Temporary test files
+test_*.R
+wireframe.txt
 
-# Backup files
-*.bak
-*.backup 
+# Data layers (large files)
+ZipLayer/
+
+# Documentation (keep local only)
+Documentation/
