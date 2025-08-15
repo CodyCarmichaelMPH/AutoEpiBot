@@ -54,6 +54,68 @@ ess_txt <- function(u)
   httr::content(httr::GET(u, authenticate(usr, pwd)),
                 as = "text", encoding = "UTF-8")
 
+# --- External data helpers --------------------------------------------------
+# Mapping of station IDs to human-readable names
+CLIMATE_STATIONS <- c(
+  "pdt-eln" = "Ellensburg, Washington",
+  "otx-lws" = "Lewiston, Idaho",
+  "pdt-dls" = "Dallesport, Washington",
+  "pdt-psc" = "Pasco, Washington",
+  "sew-sew" = "Seattle, Washington",
+  "otx-geg" = "Spokane, Washington",
+  "pqr-vuo" = "Vancouver, Washington",
+  "pdt-alw" = "Walla Walla, Washington",
+  "otx-eat" = "Wenatchee, Washington",
+  "pdt-ykm" = "Yakima, Washington",
+  "sew-olm" = "Olympia, Washington",
+  "otx-omk" = "Omak, Washington",
+  "sew-bli" = "Bellingham, Washington",
+  "otx-dew" = "Deer Park, Washington"
+)
+
+fetch_climate_data <- function(date, station_ids) {
+  if (length(station_ids) == 0) return(NULL)
+  factors <- c("maxtemp", "mintemp", "avgtemp", "precip", "snow")
+  names_map <- c(maxtemp = "MaxTemp", mintemp = "MinTemp",
+                 avgtemp = "AvgTemp", precip = "Water", snow = "Snow")
+  station_param <- paste0("&stationID=", station_ids, collapse = "")
+
+  data_list <- lapply(factors, function(fct) {
+    url <- glue(
+      "https://essence.syndromicsurveillance.org/nssp_essence/api/dataDetails",
+      "?percentParam=noPercent&endDate={fmt_api(date)}&userId=5629",
+      "&weatherFactor={fct}&datasource=va_weather_aggr&stationAggregateFunc=max",
+      "&timeResolution=daily&aqtTarget=DataDetails&detector=probrepswitch",
+      "&timeAggregateFunc=max&startDate={fmt_api(date)}&refValues=true{station_param}"
+    )
+    js <- fromJSON(ess_txt(url), flatten = TRUE)$dataDetails
+    if (is.null(js)) return(tibble())
+    tibble(Station = js$stationID, value = js$value) %>%
+      mutate(variable = names_map[[fct]])
+  })
+
+  df <- bind_rows(data_list) %>%
+    tidyr::pivot_wider(names_from = variable, values_from = value) %>%
+    mutate(Station = CLIMATE_STATIONS[Station])
+
+  df
+}
+
+fetch_air_quality_data <- function(date, county) {
+  if (!nzchar(county)) return(NULL)
+  county_param <- paste0(tolower(county), ",%20wa")
+  url <- glue(
+    "https://essence.syndromicsurveillance.org/nssp_essence/api/dataDetails",
+    "?percentParam=noPercent&endDate={fmt_api(date)}&airQualityParameterName=pm2.5-24hr",
+    "&County={county_param}&userId=5629&datasource=airquality",
+    "&stationAggregateFunc=max&timeResolution=daily&aqtTarget=DataDetails",
+    "&detector=probrepswitch&timeAggregateFunc=max&startDate={fmt_api(date)}&refValues=true"
+  )
+  js <- fromJSON(ess_txt(url), flatten = TRUE)$dataDetails
+  if (is.null(js)) return(NULL)
+  tibble(Date = as.character(date), Value = js$value)
+}
+
 # --- Age bins (from settings) -----------------------------------------------
 age_binner <- (function() {
   s <- rep_set$Age_Group_Stratification
@@ -143,7 +205,7 @@ store <- function(dk, sk, sect, nm, obj) {
 
 for (d in sort(unique(reports_df$ObvsDate))) {
   dk   <- as.character(d)
-  reports[[dk]] <- list()
+  reports[[dk]] <- list(meta = list())
   rep_d  <- filter(reports_df, ObvsDate == d)
   denom_d <- filter(all_visits, ObvsDate == d)
   
@@ -315,6 +377,13 @@ for (d in sort(unique(reports_df$ObvsDate))) {
         store(dk, sk, "maps", "choropleth", m)
       }
     }
+  }
+
+  if (rep_set$Climate$Include) {
+    reports[[dk]]$meta$climate <- fetch_climate_data(d, rep_set$Climate$Station_IDs)
+  }
+  if (rep_set$Air_Quality$enabled) {
+    reports[[dk]]$meta$air_quality <- fetch_air_quality_data(d, rep_set$Air_Quality$county)
   }
 }
 
