@@ -67,10 +67,17 @@ last_sig <- if (nrow(last_sig_df) > 0) {
 ## Files Modified
 
 1. **TSCreate.R** - Fixed ObvsDate max() warnings
-2. **EmailCreator.R** - Enhanced email functionality and integration
-3. **HTMLReportGenerator.R** - Fixed graph embedding in HTML reports
+2. **EmailCreator.R** - Enhanced email functionality and integration with proper Outlook detection
+3. **HTMLReportGenerator.R** - Fixed graph embedding in HTML reports (reverted to iframe approach for reliability)
 4. **GUI.R** - Simplified email configuration interface
 5. **ReportCreator.R** - Improved geojson error handling
+6. **install_packages.R** - Preserved for GitHub (no changes needed)
+
+## New Files Added
+
+1. **debug_issues.R** - Focused diagnostic script for key issues
+2. **test_workflow.R** - Comprehensive test script for all components
+3. **diagnostic_comprehensive.R** - Full system diagnostic (if needed)
 
 ## Key Improvements
 
@@ -79,12 +86,31 @@ last_sig <- if (nrow(last_sig_df) > 0) {
 - **Robustness**: Enhanced fallback mechanisms when components are unavailable
 - **Integration**: Leveraged your proven email script patterns for better Outlook integration
 
+## Specific Issues Addressed
+
+### Issue 1: Installer File Missing
+**Status**: ✅ **RESOLVED** - `install_packages.R` confirmed present and ready for GitHub push
+
+### Issue 2: Email Creates HTML File Instead of Actual Email  
+**Status**: ✅ **IMPROVED** - Enhanced email system now:
+- Properly detects Outlook availability before attempting email creation
+- Creates actual Outlook emails when available
+- Only falls back to HTML files when Outlook is unavailable (with clear instructions)
+- Provides better error messaging and troubleshooting guidance
+
+### Issue 3: Graphs Not Working in Reports
+**Status**: ✅ **FIXED** - Graph system now:
+- Properly generates visualizations in ReportCreator.R  
+- Embeds graphs correctly in HTML reports using reliable iframe approach
+- Includes better error handling and debugging information
+- Provides clear messaging when visualizations are missing
+
 ## Testing Recommendations
 
-1. Run the full workflow to verify all warnings are resolved
-2. Test email generation with and without pre-configured recipients
-3. Verify HTML reports now contain embedded visualizations
-4. Check that choropleth maps work when zipcode data is available
+1. **Run the test workflow**: `source("test_workflow.R")` to verify all components
+2. **Test email generation**: Check if Outlook creates actual emails vs HTML files
+3. **Verify HTML reports**: Confirm embedded visualizations appear correctly
+4. **Check Outlook integration**: Ensure RDCOMClient works with your Outlook installation
 
 ## Contact
 

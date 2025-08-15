@@ -222,17 +222,14 @@ create_visualization_section <- function(syndrome, date, autoepi_report) {
     html_content <- paste0(html_content, '<h4>Count Distributions</h4>')
     
     for (plot_name in names(plots$count)) {
-      # Create inline HTML from plotly object
-      plot_html <- htmlwidgets::saveWidget(plots$count[[plot_name]], 
-                                          file = tempfile(fileext = ".html"), 
-                                          selfcontained = TRUE)
-      plot_content <- readLines(plot_html)
-      plot_inline <- paste(plot_content, collapse = "\n")
+      # Create separate HTML file for the plot (easier and more reliable)
+      plot_file <- file.path(reports_dir, glue("plot_{syndrome}_{date}_{plot_name}.html"))
+      htmlwidgets::saveWidget(plots$count[[plot_name]], plot_file, selfcontained = TRUE)
       
       html_content <- paste0(html_content, glue('
         <div class="plot-container">
             <h5>{stringr::str_to_title(gsub("_", " ", plot_name))}</h5>
-            {plot_inline}
+            <iframe src="{basename(plot_file)}" width="100%" height="400" frameborder="0"></iframe>
         </div>
       '))
     }
@@ -245,17 +242,14 @@ create_visualization_section <- function(syndrome, date, autoepi_report) {
     html_content <- paste0(html_content, '<h4>Rates per 10,000 Population</h4>')
     
     for (plot_name in names(plots$per10k)) {
-      # Create inline HTML from plotly object
-      plot_html <- htmlwidgets::saveWidget(plots$per10k[[plot_name]], 
-                                          file = tempfile(fileext = ".html"), 
-                                          selfcontained = TRUE)
-      plot_content <- readLines(plot_html)
-      plot_inline <- paste(plot_content, collapse = "\n")
+      # Create separate HTML file for the plot
+      plot_file <- file.path(reports_dir, glue("plot_{syndrome}_{date}_per10k_{plot_name}.html"))
+      htmlwidgets::saveWidget(plots$per10k[[plot_name]], plot_file, selfcontained = TRUE)
       
       html_content <- paste0(html_content, glue('
         <div class="plot-container">
             <h5>{stringr::str_to_title(gsub("_", " ", plot_name))} per 10k</h5>
-            {plot_inline}
+            <iframe src="{basename(plot_file)}" width="100%" height="400" frameborder="0"></iframe>
         </div>
       '))
     }
@@ -268,17 +262,14 @@ create_visualization_section <- function(syndrome, date, autoepi_report) {
     html_content <- paste0(html_content, '<h4>Geographic Distribution</h4>')
     
     for (map_name in names(plots$maps)) {
-      # Create inline HTML from leaflet object
-      map_html <- htmlwidgets::saveWidget(plots$maps[[map_name]], 
-                                         file = tempfile(fileext = ".html"), 
-                                         selfcontained = TRUE)
-      map_content <- readLines(map_html)
-      map_inline <- paste(map_content, collapse = "\n")
+      # Create separate HTML file for the map
+      map_file <- file.path(reports_dir, glue("map_{syndrome}_{date}_{map_name}.html"))
+      htmlwidgets::saveWidget(plots$maps[[map_name]], map_file, selfcontained = TRUE)
       
       html_content <- paste0(html_content, glue('
         <div class="plot-container">
             <h5>{stringr::str_to_title(gsub("_", " ", map_name))}</h5>
-            {map_inline}
+            <iframe src="{basename(map_file)}" width="100%" height="500" frameborder="0"></iframe>
         </div>
       '))
     }
