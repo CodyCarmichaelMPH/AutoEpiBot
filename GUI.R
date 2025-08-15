@@ -232,6 +232,15 @@ ui <- fluidPage(
                             
                             tags$hr(),
                             
+                            h4("Email Configuration"),
+                            textAreaInput("email_recipients", "Email Recipients (one per line)", 
+                                         placeholder = "user1@example.com\nuser2@example.com\nsupervisor@example.com",
+                                         rows = 4),
+                            textInput("email_from", "From Email Address", 
+                                     placeholder = "autoepi@yourdepartment.gov"),
+                            
+                            tags$hr(),
+                            
                             h4("Key Folder Locations"),
                             fluidRow(
                               column(9, textInput("logs_dir", "Logs.csv folder", "")),
@@ -374,6 +383,11 @@ server <- function(input, output, session) {
         else list(enabled = FALSE),
         Time_to_Discharge_Analysis = FALSE
       ),
+      Email_Settings = list(
+        Recipients = if (nzchar(input$email_recipients %||% ""))
+          strsplit(input$email_recipients, "\n")[[1]] else character(0),
+        From_Address = input$email_from %||% ""
+      ),
       IO = list(
         Logs_Dir            = input$logs_dir %||% "",
         Reports_Dir         = input$reports_dir %||% "",
@@ -479,6 +493,13 @@ server <- function(input, output, session) {
     updateTextInput(session, "logs_dir", value = s$IO$Logs_Dir)
     updateTextInput(session, "reports_dir", value = s$IO$Reports_Dir)
     updateTextInput(session, "syndrome_file", value = s$IO$Syndrome_List_Path)
+    
+    # Load email settings
+    if (!is.null(s$Email_Settings)) {
+      recipients_text <- paste(s$Email_Settings$Recipients, collapse = "\n")
+      updateTextAreaInput(session, "email_recipients", value = recipients_text)
+      updateTextInput(session, "email_from", value = s$Email_Settings$From_Address)
+    }
     
     updateTextInput(session, "save_dir", value = s$Output$Save_Dir)
     updateTextInput(session, "save_name", value = s$Output$Save_Name)

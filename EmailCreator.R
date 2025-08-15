@@ -26,7 +26,8 @@ suppressPackageStartupMessages({
 # ------------------------------------------------------------------
 # 1.  Load required data files
 # ------------------------------------------------------------------
-cat("=== AutoEpi Email Creator ===\n")
+cat("AutoEpi Email Creator\n")
+cat("=====================\n")
 
 # Load email starter info (what syndromes were queried)
 if (!file.exists("EmailStarterInfo.RData")) {
@@ -86,6 +87,14 @@ reports_generated <- logs_df %>%
     Date = ObvsDate,
     `Report Location` = ReportLocation
   )
+
+# Load individual report metadata if available
+individual_reports_path <- file.path(autoepi_settings$IO$Reports_Dir, "individual_reports_metadata.RData")
+individual_reports_list <- list()
+if (file.exists(individual_reports_path)) {
+  load(individual_reports_path)  # individual_reports_metadata
+  individual_reports_list <- individual_reports_metadata
+}
 
 # C. Count alerts for subject line
 alert_count <- logs_df %>%
@@ -163,6 +172,27 @@ if (nrow(reports_generated) > 0) {
 {df_to_html_table(reports_generated)}
 
 "))
+  
+  # Add individual report links if available
+  if (length(individual_reports_list) > 0) {
+    email_body <- paste0(email_body, "
+<h3>Individual Alert Reports</h3>
+<p>Detailed HTML reports have been generated for each syndrome:</p>
+<ul>
+")
+    
+    for (report in individual_reports_list) {
+      report_name <- basename(report$file_path)
+      email_body <- paste0(email_body, glue("
+<li><strong>{report$syndrome}</strong> ({report$date}) - {report$visit_count} visits
+    <br/>Attachment: <a href='file:///{normalizePath(report$file_path, winslash='/')}'>Open Report</a>
+</li>
+"))
+    }
+    
+    email_body <- paste0(email_body, "</ul>")
+  }
+  
 } else {
   email_body <- paste0(email_body, "
 <p><strong>No reports were generated today.</strong> All examined syndromes were within normal parameters.</p>
@@ -203,32 +233,63 @@ tryCatch({
   mail_item[["Subject"]] <- subject_line
   mail_item[["HTMLBody"]] <- email_body
   
-  # Note: Recipients would need to be configured based on your settings
-  # For now, we'll prepare the email but not send automatically
-  # Uncomment and modify these lines to add recipients:
-  # mail_item[["To"]] <- "recipient@example.com"
-  # mail_item[["CC"]] <- "cc@example.com"
+  # Set recipients from configuration
+  email_recipients <- autoepi_settings$Email_Settings$Recipients
+  from_address <- autoepi_settings$Email_Settings$From_Address
   
-  # Display the email (allows manual review before sending)
-  mail_item$Display()
+  if (length(email_recipients) > 0) {
+    # Set primary recipients
+    mail_item[["To"]] <- paste(email_recipients, collapse = "; ")
+    cat("Recipients configured:", paste(email_recipients, collapse = ", "), "\n")
+  } else {
+    cat("WARNING: No email recipients configured in settings\n")
+  }
   
-  cat("✓ Email created and displayed in Outlook\n")
+  if (nzchar(from_address)) {
+    # Note: Setting SentOnBehalfOfName for display purposes
+    # Actual sending account depends on logged-in Outlook user
+    mail_item[["SentOnBehalfOfName"]] <- from_address
+  }
+  
+  # Attach individual HTML reports if they exist
+  if (length(individual_reports_list) > 0) {
+    cat("Attaching", length(individual_reports_list), "individual reports...\n")
+    for (report in individual_reports_list) {
+      if (file.exists(report$file_path)) {
+        mail_item$Attachments$Add(normalizePath(report$file_path))
+        cat("  SUCCESS: Attached:", basename(report$file_path), "\n")
+      }
+    }
+  }
+  
+  # Check if auto-send is enabled (can be added to settings later)
+  auto_send <- length(email_recipients) > 0  # Auto-send if recipients are configured
+  
+  if (auto_send) {
+    # Send automatically
+    mail_item$Send()
+    cat("SUCCESS: Email sent automatically to", length(email_recipients), "recipients\n")
+  } else {
+    # Display for manual review
+    mail_item$Display()
+    cat("Email created and displayed in Outlook for manual review\n")
+  }
+  
   cat("Subject:", subject_line, "\n")
   cat("Syndromes examined:", nrow(syndrome_summary), "\n")
   cat("Reports generated:", nrow(reports_generated), "\n")
-  
-  # Optionally auto-send (uncomment to enable):
-  # mail_item$Send()
-  # cat("✓ Email sent automatically\n")
+  if (length(individual_reports_list) > 0) {
+    cat("Individual reports attached:", length(individual_reports_list), "\n")
+  }
   
 }, error = function(e) {
-  cat("❌ Error creating email:", conditionMessage(e), "\n")
+  cat("ERROR: Error creating email:", conditionMessage(e), "\n")
   cat("Make sure Microsoft Outlook is installed and accessible.\n")
   
   # Fallback: Save email content to file
   email_file <- file.path(getwd(), glue("AutoEpi_Email_{today_date}.html"))
   writeLines(email_body, email_file)
-  cat("📄 Email content saved to:", email_file, "\n")
+  cat("Email content saved to:", email_file, "\n")
 })
 
 # ------------------------------------------------------------------
@@ -256,12 +317,13 @@ updated_email_count <- logs_df %>%
 
 cat("Updated", updated_email_count, "log entries to mark emails as sent\n")
 
-cat("\n=== AutoEpi Email Creator Complete ===\n")
+cat("\nAutoEpi Email Creator Complete\n")
+cat("==============================\n")
 
 # ------------------------------------------------------------------
 # 7.  Summary output
 # ------------------------------------------------------------------
-cat("📧 Email Summary:\n")
+cat("Email Summary:\n")
 cat("   Subject:", subject_line, "\n")
 cat("   Syndromes examined:", nrow(syndrome_summary), "\n") 
 cat("   Reports generated:", nrow(reports_generated), "\n")
