@@ -236,8 +236,7 @@ ui <- fluidPage(
                             textAreaInput("email_recipients", "Email Recipients (one per line)", 
                                          placeholder = "user1@example.com\nuser2@example.com\nsupervisor@example.com",
                                          rows = 4),
-                            textInput("email_from", "From Email Address", 
-                                     placeholder = "autoepi@yourdepartment.gov"),
+                            helpText("Note: The email will be sent from the currently logged-in Outlook account. If no recipients are configured here, you'll be prompted to enter them when the email is generated."),
                             
                             tags$hr(),
                             
@@ -385,8 +384,7 @@ server <- function(input, output, session) {
       ),
       Email_Settings = list(
         Recipients = if (nzchar(input$email_recipients %||% ""))
-          strsplit(input$email_recipients, "\n")[[1]] else character(0),
-        From_Address = input$email_from %||% ""
+          strsplit(input$email_recipients, "\n")[[1]] else character(0)
       ),
       IO = list(
         Logs_Dir            = input$logs_dir %||% "",
@@ -498,7 +496,6 @@ server <- function(input, output, session) {
     if (!is.null(s$Email_Settings)) {
       recipients_text <- paste(s$Email_Settings$Recipients, collapse = "\n")
       updateTextAreaInput(session, "email_recipients", value = recipients_text)
-      updateTextInput(session, "email_from", value = s$Email_Settings$From_Address)
     }
     
     updateTextInput(session, "save_dir", value = s$Output$Save_Dir)

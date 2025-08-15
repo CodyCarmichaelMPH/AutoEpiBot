@@ -88,11 +88,17 @@ for (i in seq_len(nrow(syndromes))) {
   s_ccdd <- syndromes$Syndrome_Snippet[i]
   
   ## 4a.  Pick sensible start-date
-  last_sig <- logs_df |>
+  last_sig_df <- logs_df |>
     filter(presented_name == s_name,
-           AlertLevel %in% c("Warning", "Alert", "False Positive")) |>
-    summarise(lat = max(ObvsDate, na.rm = TRUE)) |>
-    pull(lat)
+           AlertLevel %in% c("Warning", "Alert", "False Positive"))
+  
+  last_sig <- if (nrow(last_sig_df) > 0) {
+    last_sig_df |>
+      summarise(lat = max(ObvsDate, na.rm = TRUE)) |>
+      pull(lat)
+  } else {
+    NA
+  }
   
   start_date <- if (is.finite(last_sig) && !is.na(last_sig)) last_sig
   else as.Date(autoepi_settings$Dates$StartDate_Display)

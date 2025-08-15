@@ -218,51 +218,72 @@ create_visualization_section <- function(syndrome, date, autoepi_report) {
   html_content <- '<div class="section"><h3>Visualizations</h3>'
   
   # Count plots
-  if (!is.null(plots$count)) {
+  if (!is.null(plots$count) && length(plots$count) > 0) {
     html_content <- paste0(html_content, '<h4>Count Distributions</h4>')
     
     for (plot_name in names(plots$count)) {
-      plot_file <- file.path(reports_dir, glue("plot_{syndrome}_{date}_{plot_name}.html"))
-      saveWidget(plots$count[[plot_name]], plot_file, selfcontained = TRUE)
+      # Create inline HTML from plotly object
+      plot_html <- htmlwidgets::saveWidget(plots$count[[plot_name]], 
+                                          file = tempfile(fileext = ".html"), 
+                                          selfcontained = TRUE)
+      plot_content <- readLines(plot_html)
+      plot_inline <- paste(plot_content, collapse = "\n")
+      
       html_content <- paste0(html_content, glue('
         <div class="plot-container">
             <h5>{stringr::str_to_title(gsub("_", " ", plot_name))}</h5>
-            <iframe src="{basename(plot_file)}" width="100%" height="400" frameborder="0"></iframe>
+            {plot_inline}
         </div>
       '))
     }
+  } else {
+    html_content <- paste0(html_content, '<p><em>No count visualizations available.</em></p>')
   }
   
-  # Per 10k plots
-  if (!is.null(plots$per10k)) {
+  # Per 10k plots  
+  if (!is.null(plots$per10k) && length(plots$per10k) > 0) {
     html_content <- paste0(html_content, '<h4>Rates per 10,000 Population</h4>')
     
     for (plot_name in names(plots$per10k)) {
-      plot_file <- file.path(reports_dir, glue("plot_{syndrome}_{date}_per10k_{plot_name}.html"))
-      saveWidget(plots$per10k[[plot_name]], plot_file, selfcontained = TRUE)
+      # Create inline HTML from plotly object
+      plot_html <- htmlwidgets::saveWidget(plots$per10k[[plot_name]], 
+                                          file = tempfile(fileext = ".html"), 
+                                          selfcontained = TRUE)
+      plot_content <- readLines(plot_html)
+      plot_inline <- paste(plot_content, collapse = "\n")
+      
       html_content <- paste0(html_content, glue('
         <div class="plot-container">
             <h5>{stringr::str_to_title(gsub("_", " ", plot_name))} per 10k</h5>
-            <iframe src="{basename(plot_file)}" width="100%" height="400" frameborder="0"></iframe>
+            {plot_inline}
         </div>
       '))
     }
+  } else {
+    html_content <- paste0(html_content, '<p><em>No per-10k visualizations available.</em></p>')
   }
   
   # Maps
-  if (!is.null(plots$maps)) {
+  if (!is.null(plots$maps) && length(plots$maps) > 0) {
     html_content <- paste0(html_content, '<h4>Geographic Distribution</h4>')
     
     for (map_name in names(plots$maps)) {
-      map_file <- file.path(reports_dir, glue("map_{syndrome}_{date}_{map_name}.html"))
-      saveWidget(plots$maps[[map_name]], map_file, selfcontained = TRUE)
+      # Create inline HTML from leaflet object
+      map_html <- htmlwidgets::saveWidget(plots$maps[[map_name]], 
+                                         file = tempfile(fileext = ".html"), 
+                                         selfcontained = TRUE)
+      map_content <- readLines(map_html)
+      map_inline <- paste(map_content, collapse = "\n")
+      
       html_content <- paste0(html_content, glue('
         <div class="plot-container">
             <h5>{stringr::str_to_title(gsub("_", " ", map_name))}</h5>
-            <iframe src="{basename(map_file)}" width="100%" height="500" frameborder="0"></iframe>
+            {map_inline}
         </div>
       '))
     }
+  } else {
+    html_content <- paste0(html_content, '<p><em>No maps available (check zipcode data).</em></p>')
   }
   
   html_content <- paste0(html_content, '</div>')

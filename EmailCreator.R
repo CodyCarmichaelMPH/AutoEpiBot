@@ -1,15 +1,16 @@
 ############################################################
-##  AutoEpi – Email Summary Generator
+##  AutoEpi – Enhanced Email Summary Generator
 ##  --------------------------------------------------------
 ##  Prerequisites: • EmailStarterInfo.RData    (from TSCreate.R)
 ##                 • LogsFileLoc.RData         (from LogsCreate.R)
 ##                 • AutoEpi_Settings.RData    (from GUI.R)
 ##
-##  Generates and sends automated email summaries using RDCOMClient
+##  Generates and sends automated email summaries using enhanced Outlook integration
 ##  - Summary of examined syndromes and date ranges
 ##  - List of generated reports (if any)
 ##  - Link to logs for detailed review
 ##  - Dynamic subject line based on alert count
+##  - Enhanced Outlook integration based on proven email script
 ############################################################
 
 suppressPackageStartupMessages({
@@ -17,11 +18,38 @@ suppressPackageStartupMessages({
   library(readr)
   library(glue)
   library(knitr)
-  if (!requireNamespace("RDCOMClient", quietly = TRUE)) {
-    stop("RDCOMClient package required. Install with: install.packages('RDCOMClient')")
-  }
-  library(RDCOMClient)
+  library(stringr)
+  library(stringdist)
 })
+
+# Enhanced Outlook integration functions (based on proven script)
+load_or_install <- function(pkg) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    install.packages(pkg, repos = "https://cloud.r-project.org")
+  }
+  suppressPackageStartupMessages(
+    library(pkg, character.only = TRUE, quietly = TRUE)
+  )
+  TRUE
+}
+
+ensure_dependencies <- function() {
+  pkgs <- c("RDCOMClient")
+  vapply(pkgs, load_or_install, FUN.VALUE = logical(1))
+  invisible(NULL)
+}
+
+get_outlook_app <- function() {
+  app <- tryCatch(RDCOMClient::COMCreate("Outlook.Application"),
+                  error = function(e) NULL)
+  if (is.null(app)) {
+    stop("Could not create Outlook COM object – is Outlook installed *and* running?")
+  }
+  app
+}
+
+# Ensure dependencies are loaded
+ensure_dependencies()
 
 # ------------------------------------------------------------------
 # 1.  Load required data files
@@ -217,14 +245,46 @@ please contact Cody Carmichael, MPH, CPH at
 "))
 
 # ------------------------------------------------------------------
-# 5.  Create and send email using RDCOMClient
+# 5.  Enhanced email creation and sending
 # ------------------------------------------------------------------
 
 cat("Creating email...\n")
 
+# Get recipient email addresses (prompt user if not configured)
+email_recipients <- autoepi_settings$Email_Settings$Recipients
+
+if (length(email_recipients) == 0) {
+  cat("No email recipients configured in settings.\n")
+  
+  # In interactive mode, prompt for recipients
+  if (interactive()) {
+    cat("Please enter the email address(es) where you want to send the report:\n")
+    email_input <- readline("Enter email addresses (comma-separated): ")
+    
+    if (nzchar(email_input)) {
+      email_recipients <- trimws(strsplit(email_input, ",")[[1]])
+      # Validate email format (basic check)
+      valid_emails <- grepl("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", email_recipients)
+      if (all(valid_emails)) {
+        cat("Using recipients:", paste(email_recipients, collapse = ", "), "\n")
+      } else {
+        invalid_emails <- email_recipients[!valid_emails]
+        cat("WARNING: Invalid email format detected:", paste(invalid_emails, collapse = ", "), "\n")
+        cat("Email will be displayed for manual review.\n")
+        email_recipients <- character(0)
+      }
+    } else {
+      cat("No recipients provided. Email will be displayed for manual sending.\n")
+      email_recipients <- character(0)
+    }
+  } else {
+    cat("Running in non-interactive mode. Email will be displayed for manual review.\n")
+  }
+}
+
 tryCatch({
-  # Create Outlook application object
-  outlook_app <- COMCreate("Outlook.Application")
+  # Create Outlook application using enhanced integration
+  outlook_app <- get_outlook_app()
   
   # Create new mail item
   mail_item <- outlook_app$CreateItem(0)  # 0 = olMailItem
@@ -233,22 +293,13 @@ tryCatch({
   mail_item[["Subject"]] <- subject_line
   mail_item[["HTMLBody"]] <- email_body
   
-  # Set recipients from configuration
-  email_recipients <- autoepi_settings$Email_Settings$Recipients
-  from_address <- autoepi_settings$Email_Settings$From_Address
-  
+  # Set recipients
   if (length(email_recipients) > 0) {
     # Set primary recipients
     mail_item[["To"]] <- paste(email_recipients, collapse = "; ")
     cat("Recipients configured:", paste(email_recipients, collapse = ", "), "\n")
   } else {
-    cat("WARNING: No email recipients configured in settings\n")
-  }
-  
-  if (nzchar(from_address)) {
-    # Note: Setting SentOnBehalfOfName for display purposes
-    # Actual sending account depends on logged-in Outlook user
-    mail_item[["SentOnBehalfOfName"]] <- from_address
+    cat("No recipients set - email will be displayed for manual review\n")
   }
   
   # Attach individual HTML reports if they exist
@@ -256,13 +307,17 @@ tryCatch({
     cat("Attaching", length(individual_reports_list), "individual reports...\n")
     for (report in individual_reports_list) {
       if (file.exists(report$file_path)) {
-        mail_item$Attachments$Add(normalizePath(report$file_path))
+        # Use enhanced path handling
+        attachment_path <- normalizePath(report$file_path, winslash = "\\", mustWork = FALSE)
+        mail_item$Attachments$Add(attachment_path)
         cat("  SUCCESS: Attached:", basename(report$file_path), "\n")
+      } else {
+        cat("  WARNING: Report file not found:", report$file_path, "\n")
       }
     }
   }
   
-  # Check if auto-send is enabled (can be added to settings later)
+  # Determine sending behavior
   auto_send <- length(email_recipients) > 0  # Auto-send if recipients are configured
   
   if (auto_send) {
@@ -284,12 +339,16 @@ tryCatch({
   
 }, error = function(e) {
   cat("ERROR: Error creating email:", conditionMessage(e), "\n")
-  cat("Make sure Microsoft Outlook is installed and accessible.\n")
+  cat("Make sure Microsoft Outlook is installed and running.\n")
   
-  # Fallback: Save email content to file
+  # Enhanced fallback: Save email content to file with better formatting
   email_file <- file.path(getwd(), glue("AutoEpi_Email_{today_date}.html"))
   writeLines(email_body, email_file)
   cat("Email content saved to:", email_file, "\n")
+  
+  if (length(email_recipients) > 0) {
+    cat("Intended recipients were:", paste(email_recipients, collapse = ", "), "\n")
+  }
 })
 
 # ------------------------------------------------------------------

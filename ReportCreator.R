@@ -76,10 +76,17 @@ age_binner <- (function() {
 # --- Load zipcode geojson for mapping ---------------------------------------
 zip_geo_path <- file.path("ZipLayer", "wa_washington_zip_codes_geo.min.json")
 if (!file.exists(zip_geo_path)) {
-  warning("Zipcode geojson not found at ", zip_geo_path, ". Choropleth maps will be skipped.")
+  cat("WARNING: Zipcode geojson not found at ", zip_geo_path, ". Choropleth maps will be skipped.\n")
   zip_geo <- NULL
 } else {
-  zip_geo <- jsonlite::fromJSON(zip_geo_path)
+  tryCatch({
+    zip_geo <- jsonlite::fromJSON(zip_geo_path)
+    cat("SUCCESS: Loaded zipcode geojson data for choropleth maps\n")
+  }, error = function(e) {
+    cat("ERROR: Failed to load zipcode geojson:", conditionMessage(e), "\n")
+    cat("Choropleth maps will be skipped.\n")
+    zip_geo <<- NULL
+  })
 }
 
 # ------------------------------------------------------------------
