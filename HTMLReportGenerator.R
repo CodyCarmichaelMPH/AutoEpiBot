@@ -47,6 +47,37 @@ reports_dir <- normalizePath(
   autoepi_settings$IO$Reports_Dir, winslash = "/", mustWork = FALSE)
 
 # ------------------------------------------------------------------
+# Helper functions for rendering external data
+# ------------------------------------------------------------------
+
+create_climate_section <- function(dat) {
+  if (is.null(dat) || nrow(dat) == 0) return("")
+  inner <- apply(dat, 1, function(row) {
+    glue(
+      "<h4>For station: {row['Station']}</h4>",
+      "<table class=\"data-table\">",
+      "<tr><th>MaxTemp</th><td>{row['MaxTemp']}</td></tr>",
+      "<tr><th>MinTemp</th><td>{row['MinTemp']}</td></tr>",
+      "<tr><th>AvgTemp</th><td>{row['AvgTemp']}</td></tr>",
+      "<tr><th>Water (rain)</th><td>{row['Water']}</td></tr>",
+      "<tr><th>Snow</th><td>{row['Snow']}</td></tr>",
+      "</table>"
+    )
+  })
+  glue('<div class="section"><h3>Climate</h3>{paste(inner, collapse = "")}</div>')
+}
+
+create_aqi_section <- function(dat, county) {
+  if (is.null(dat)) return("")
+  table_rows <- glue('<tr><td>{dat$Date}</td><td>{dat$Value}</td></tr>')
+  glue(
+    '<div class="section"><h3>Air Quality - {county} County</h3>',
+    '<table class="data-table"><tr><th>Date</th><th>PM2.5 24 hour Average</th></tr>',
+    '{table_rows}</table></div>'
+  )
+}
+
+# ------------------------------------------------------------------
 # 2.  HTML Template Functions
 # ------------------------------------------------------------------
 
@@ -311,10 +342,16 @@ for (i in seq_len(nrow(report_combinations))) {
   alert_level <- if (nrow(syndrome_data) > 10) "HIGH" else if (nrow(syndrome_data) > 5) "MEDIUM" else "LOW"
   
   # Generate HTML content
+  date_key <- as.character(date)
   html_content <- paste0(
     html_header(syndrome, date, alert_level),
     create_summary_section(syndrome_data, date),
     create_visualization_section(syndrome, date, autoepi_report),
+    if (isTRUE(autoepi_settings$Report_Settings$Climate$Include))
+      create_climate_section(autoepi_report[[date_key]]$meta$climate) else "",
+    if (isTRUE(autoepi_settings$Report_Settings$Air_Quality$enabled))
+      create_aqi_section(autoepi_report[[date_key]]$meta$air_quality,
+                         autoepi_settings$Report_Settings$Air_Quality$county) else "",
     html_footer()
   )
   
