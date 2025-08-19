@@ -1,0 +1,265 @@
+---
+title: "AutoEpi: Daily Syndrome Report"
+subtitle: "Automated RMarkdown Template"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    theme: readable
+    code_folding: hide
+    df_print: paged
+params:
+  date_key: "20301"
+  syndrome_key: null
+  report: !r list()
+  meta: !r list()
+---
+
+<!--
+This template expects to be rendered by a driver script that passes:
+- params$report          (list: $count, $per10k, $maps each containing htmlwidgets or NULL)
+- params$meta            (list: climate_table, climate_stats, aqi_stations, aqi_summary, aqi_plot)
+Optionally:
+- params$date_key        (character; key from autoepi_report list)
+- params$syndrome_key    (character; name/key used in autoepi_report list)
+The template will try to infer date and syndrome from whatever is available.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.align = "center")
+`%||%` <- function(a, b) if (!is.null(a) && length(a)) a else b
+has <- function(x) !is.null(x) && length(x) > 0
+safekable <- function(df, caption = NULL) {
+  if (!is.null(df) && NROW(df) > 0) {
+    knitr::kable(df, caption = caption, format = "html")
+  }
+}
+
+# Try to extract a human-readable title from a plotly htmlwidget
+pluck_plot_title <- function(w) {
+  tryCatch({
+    if (inherits(w, "htmlwidget")) {
+      # plotly stores layout$title$text in x$layout$title$text
+      t1 <- w[["x"]][["layout"]][["title"]]
+      if (is.character(t1)) return(t1)
+      if (is.list(t1) && !is.null(t1$text)) return(as.character(t1$text))
+    }
+    NULL
+  }, error = function(e) NULL)
+}
+
+# Parse a date-like thing to "YYYY-MM-DD" or "MM-DD-YYYY" depending on input
+fmt_date_label <- function(d) {
+  if (inherits(d, "Date")) return(format(d, "%Y-%m-%d"))
+  if (is.numeric(d) && !is.na(d)) {
+    s <- as.character(d)
+    if (nchar(s) == 8) return(format(as.Date(s, "%Y%m%d"), "%Y-%m-%d"))
+  }
+  if (is.character(d) && nzchar(d)) {
+    s <- d[1]
+    # Accept common forms
+    if (grepl("^\\d{4}-\\d{2}-\\d{2}$", s)) return(s)
+    if (grepl("^\\d{8}$", s)) return(format(as.Date(s, "%Y%m%d"), "%Y-%m-%d"))
+    if (grepl("^\\d{2}/\\d{2}/\\d{4}$", s)) {
+      # mm/dd/yyyy -> yyyy-mm-dd
+      return(format(as.Date(s, "%m/%d/%Y"), "%Y-%m-%d"))
+    }
+  }
+  NA_character_
+}
+
+# Heuristic date inference:
+# 1) meta$climate_stats$Date
+# 2) meta$aqi_summary$Date
+# 3) first(meta$aqi_stations$Date)
+# 4) fall back to params$date_key (string normalization attempted)
+infer_date_label <- function(meta, date_key) {
+  d <- tryCatch(meta$climate_stats$Date, error = function(e) NULL)
+  lbl <- fmt_date_label(d)
+  if (!is.na(lbl)) return(lbl)
+  d <- tryCatch(meta$aqi_summary$Date, error = function(e) NULL)
+  lbl <- fmt_date_label(d)
+  if (!is.na(lbl)) return(lbl)
+  d <- tryCatch(meta$aqi_stations$Date, error = function(e) NULL)
+  if (has(d)) {
+    lbl <- fmt_date_label(d[1])
+    if (!is.na(lbl)) return(lbl)
+  }
+  # Fall back to date_key if provided
+  fmt_date_label(date_key) %||% as.character(date_key %||% "Unknown")
+}
+
+# Heuristic syndrome inference:
+# Prefer explicit param; otherwise sniff plot titles for a leading name.
+infer_syndrome <- function(report, syn_key) {
+  if (has(syn_key)) return(as.character(syn_key))
+  # Try count widgets first
+  cw <- tryCatch(report$count, error = function(e) NULL)
+  widgets <- c(
+    cw$age, cw$age_gender, cw$sex, cw$race, cw$ethnicity,
+    tryCatch(report$per10k$age, error = function(e) NULL),
+    tryCatch(report$per10k$sex, error = function(e) NULL),
+    tryCatch(report$per10k$hospital, error = function(e) NULL)
+  )
+  titles <- vapply(widgets, pluck_plot_title, FUN.VALUE = character(1))
+  titles <- titles[nzchar(titles)]
+  if (length(titles)) {
+    # Often titles are like "Age Group Distribution - <SYNDROME> (<DATE>)"
+    # Pull the segment between ' - ' and ' (' if present
+    s <- titles[1]
+    m <- regmatches(s, regexec(" -\\s*([^\\(]+)\\s*\\(", s))[[1]]
+    if (length(m) >= 2) return(trimws(m[2]))
+    # Else try end after last ' - '
+    parts <- unlist(strsplit(s, " - "))
+    if (length(parts) >= 2) return(trimws(parts[length(parts)]))
+    return(s) # fallback raw title
+  }
+  "Unknown Syndrome"
+}
+
+# Materialize our inferred labels
+.date_label <- infer_date_label(params$meta %||% list(), params$date_key %||% NA_character_)
+.syndrome_label <- infer_syndrome(params$report %||% list(), params$syndrome_key %||% NULL)
+```
+
+<style>
+/* Minimal, readable table and section spacing tweaks */
+table { font-size: 0.95rem; }
+h1, h2, h3 { margin-top: 1.4em; }
+.figure, .html-widget { margin-top: 0.6em; margin-bottom: 1.1em; }
+.smallcaps { font-variant: small-caps; color: #555; }
+.badge { display: inline-block; padding: 0.2em 0.5em; background: #efefef; border-radius: 4px; margin-right: 0.3em; }
+.kable-table { width: auto !important; }
+</style>
+
+# Report Overview
+
+- **Date (inferred):** `r .date_label`
+- **Date (key):** `r params$date_key %||% "—"`  
+- **Syndrome (inferred):** `r .syndrome_label`
+- **Syndrome (key):** `r params$syndrome_key %||% "—"`  
+- **Generated:** `r format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")`
+
+This report compiles **counts**, **per-10k rates**, and an optional **ZIP/ZCTA choropleth** for the selected syndrome and date. It also includes **per-date meta** for climate and air quality (PM2.5 24-hr).
+
+---
+
+# Climate (Meta)
+
+```{r climate, results="asis"}
+clim_tab   <- params$meta$climate_table %||% NULL
+clim_stats <- params$meta$climate_stats %||% NULL
+
+if (has(clim_stats)) {
+  cat("## Climate – Summary\n")
+  print(safekable(clim_stats, caption = "Climate Averages (across included stations)"))
+}
+
+if (has(clim_tab)) {
+  cat("## Climate – Stations\n")
+  print(safekable(clim_tab, caption = "Station Readings"))
+}
+```
+
+# Air Quality (Meta)
+
+```{r aqi, results="asis"}
+aqi_plot    <- params$meta$aqi_plot %||% NULL
+aqi_summary <- params$meta$aqi_summary %||% NULL
+aqi_stn     <- params$meta$aqi_stations %||% NULL
+
+if (has(aqi_plot)) {
+  cat("## AQI – PM2.5 (24-hr)\n")
+  aqi_plot
+} else if (has(aqi_summary)) {
+  cat("## AQI – PM2.5 (24-hr) Summary\n")
+  print(safekable(aqi_summary, caption = "County-Level Summary"))
+}
+
+if (has(aqi_stn)) {
+  cat("### AQI – Stations\n")
+  print(safekable(aqi_stn, caption = "Station Measurements"))
+}
+```
+
+# Counts
+
+The following sections display **counts** by demographic or facility dimension. If an element is missing in the input object, it will be omitted automatically.
+
+```{r counts, results="asis"}
+cnt <- params$report$count %||% list()
+
+if (has(cnt$age)) {
+  cat("## Age Group (Count)\n")
+  cnt$age
+}
+if (has(cnt$age_gender)) {
+  cat("## Age × Gender (Count)\n")
+  cnt$age_gender
+}
+if (has(cnt$sex)) {
+  cat("## Sex (Count)\n")
+  cnt$sex
+}
+if (has(cnt$race)) {
+  cat("## Race (Count)\n")
+  cnt$race
+}
+if (has(cnt$ethnicity)) {
+  cat("## Ethnicity (Count)\n")
+  cnt$ethnicity
+}
+```
+
+# Per-10k Rates
+
+Rates are computed upstream using the **all-visits denominators** for the report date. Sections render only if corresponding widgets exist.
+
+```{r per10k, results="asis"}
+r10 <- params$report$per10k %||% list()
+
+if (has(r10$age)) {
+  cat("## Age Group (per 10k)\n")
+  r10$age
+}
+if (has(r10$sex)) {
+  cat("## Sex (per 10k)\n")
+  r10$sex
+}
+if (has(r10$hospital)) {
+  cat("## Hospital (per 10k)\n")
+  r10$hospital
+}
+```
+
+# Map
+
+If available, the map displays **counts by ZIP/ZCTA** for the report date and syndrome. Polygons with zero counts are rendered with low opacity to retain geographic context.
+
+```{r maps, results="asis"}
+mp <- params$report$maps %||% list()
+if (has(mp$choropleth)) {
+  cat("## ZIP/ZCTA Choropleth\n")
+  mp$choropleth
+}
+```
+
+# Notes & Methods
+
+- **Data source:** NSSP ESSENCE (as configured in the generating pipeline).
+- **Date scope:** Single date per report; meta (climate/AQI) is per-date and reused for all syndromes on that date.
+- **Demographics:** Age groups are derived from settings. Unknown/empty categories may be omitted upstream.
+- **Per-10k rates:** Numerators from the selected syndrome subset; denominators from all visits on the same date.
+- **Mapping:** ZIP→ZCTA crosswalk (if configured) is applied upstream to drop PO Box/unique ZIPs and aggregate to ZCTAs before joining to geometry.
+- **Reproducibility:** All visualizations are pre-built htmlwidgets; this template does not re-query external services.
+
+## Quality Flags (optional)
+
+If you pass any flags via the driver, consider printing them here for auditor notes (e.g., missing denominators, dropped ZIPs, schema drift).
+
+# Appendix
+
+```{r session, echo=FALSE}
+sessionInfo()
+```

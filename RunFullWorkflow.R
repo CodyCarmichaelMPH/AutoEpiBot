@@ -41,7 +41,7 @@ tryCatch({
   
   # Step 5: Generate individual HTML reports
   cat("Step 5: Creating individual HTML reports per syndrome+date...\n")
-  source("HTMLReportGenerator.R")
+  source("render_autoepi_reports.R")
   cat("SUCCESS: Individual HTML reports created\n\n")
   
   # Step 6: Send email summary
