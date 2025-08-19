@@ -36,10 +36,7 @@ if (!dir.exists(reports_dir)) dir.create(reports_dir, recursive = TRUE, showWarn
 # ------------------------------------------------------------------
 fmt_api    <- function(x) format(as.Date(x), "%d%b%Y")               # for ESSENCE API
 pad_zip    <- function(z) stringr::str_pad(as.character(z), 5, pad = "0")
-clean_hosp <- function(x) {
-  # Simple identity function - just return the input as-is
-  return(x)
-}
+clean_hosp <- function(x) sub("^.*?_", "", x)
 dedupe     <- function(df) dplyr::distinct(df, .data$C_BioSense_ID, .keep_all = TRUE)
 `%||%`     <- function(a, b) if (!is.null(a)) a else b
 
@@ -77,13 +74,13 @@ ess_txt <- function(u) httr::content(httr::GET(u, authenticate(usr, pwd)), as = 
 
 # External data helpers (optional pretty names; not required for matching)
 CLIMATE_STATIONS <- c(
-  "pdt-eln"="Ellensburg, WA","otx-lws"="Lewiston, ID",
-  "pdt-dls"="Dallesport, WA","pdt-psc"="Pasco, WA",
-  "sew-sew"="Seattle, WA","otx-geg"="Spokane, WA",
-  "pqr-vuo"="Vancouver, WA","pdt-alw"="Walla Walla, WA",
-  "otx-eat"="Wenatchee, WA","pdt-ykm"="Yakima, WA",
-  "sew-olm"="Olympia, WA","otx-omk"="Omak, WA",
-  "sew-bli"="Bellingham, WA","otx-dew"="Deer Park, WA"
+  "pdt-eln"="Ellensburg, Washington","otx-lws"="Lewiston, Idaho",
+  "pdt-dls"="Dallesport, Washington","pdt-psc"="Pasco, Washington",
+  "sew-sew"="Seattle, Washington","otx-geg"="Spokane, Washington",
+  "pqr-vuo"="Vancouver, Washington","pdt-alw"="Walla Walla, Washington",
+  "otx-eat"="Wenatchee, Washington","pdt-ykm"="Yakima, Washington",
+  "sew-olm"="Olympia, Washington","otx-omk"="Omak, Washington",
+  "sew-bli"="Bellingham, Washington","otx-dew"="Deer Park, Washington"
 )
 
 # -------- Climate fetcher (single call; schema proven by smoke test) ----------
@@ -107,7 +104,6 @@ fetch_climate_data <- function(date, station_ids, verbose = FALSE) {
     transmute(
       StationRaw = as.character(.data[["Location"]] %||% NA_character_),
       Station    = tolower(StationRaw),
-      StationName = CLIMATE_STATIONS[tolower(StationRaw)] %||% StationRaw,
       DateStr    = .data[["Date"]] %||% NA_character_,
       MaxTemp    = safe_num(.data[["MaxTemp"]]),
       MinTemp    = safe_num(.data[["MinTemp"]]),
@@ -163,10 +159,6 @@ fetch_air_quality_data <- function(date, county) {
     PM25_24hr  = safe_num(dd[[val_col]])
   ) %>%
     mutate(
-      # Clean up station names for better readability
-      Station = ifelse(!is.na(Station), 
-                      tools::toTitleCase(tolower(Station)), 
-                      Station),
       Category = dplyr::case_when(
         is.na(PM25_24hr)   ~ NA_character_,
         PM25_24hr <= 12.0  ~ "Good",
@@ -204,13 +196,9 @@ age_binner <- (function() {
   force(cuts); force(labs)
   function(x) {
     x_num <- suppressWarnings(as.numeric(x))
-    result <- cut(x_num, breaks = cuts, labels = labs, right = FALSE, ordered_result = TRUE)
-    # Ensure the result is an ordered factor with all levels
-    factor(result, levels = labs, ordered = TRUE)
+    cut(x_num, breaks = cuts, labels = labs, right = FALSE, ordered_result = TRUE)
   }
 })()
-
-
 
 # ------------------------------------------------------------------
 # 3) Load zipcode GeoJSON AS SF (not list)
@@ -274,63 +262,34 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
   cat("Pulling all visits for", as.character(d), "...\n")
   js <- fromJSON(ess_txt(all_url(d)), flatten = TRUE)$dataDetails
   if (is.null(js) || nrow(js) == 0) return(tibble())
-  
-  # Check if HospitalName column exists in the API response
-  if (!"HospitalName" %in% names(js)) {
-    js$HospitalName <- "Unknown Hospital"
-  }
-  
-  # Check what columns are available in the API response
-  cat("Available columns in API response:", paste(names(js), collapse = ", "), "\n")
-  
-  # Check what columns are actually available and handle missing ones
-  available_cols <- names(js)
-  cat("Available columns in API response:", paste(available_cols, collapse = ", "), "\n")
-  
-  # Create a safe version of the data with fallbacks for missing columns
-  safe_data <- js %>%
+  js %>%
     dedupe() %>%
     mutate(
       ObvsDate  = d,
-      age_grp   = if ("Age" %in% available_cols) age_binner(Age) else NA,
-      Sex       = if ("Sex" %in% available_cols) Sex else "Unknown",
-      Hospital  = if ("HospitalName" %in% available_cols) clean_hosp(HospitalName) else "Unknown Hospital",
-      Zipcode   = if ("ZipCode" %in% available_cols) as.character(ZipCode) else "00000",
-      Race      = if ("Race" %in% available_cols) Race else "Unknown",
-      Ethnicity = if ("Ethnicity" %in% available_cols) Ethnicity else "Unknown"
+      age_grp   = age_binner(Age),
+      Sex       = Sex,
+      Hospital  = clean_hosp(HospitalName),
+      Zipcode   = as.character(ZipCode),
+      Race      = c_race,
+      Ethnicity = c_ethnicity
     ) %>%
     select(ObvsDate, age_grp, Sex, Hospital, Zipcode, Race, Ethnicity) %>%
     pivot_longer(cols = c(age_grp, Sex, Hospital, Zipcode, Race, Ethnicity),
                  names_to = "demo", values_to = "level") %>%
     count(ObvsDate, demo, level, name = "denom") %>%
     filter(!is.na(level), level != "", level != "Unknown")
-  
-  return(safe_data)
 })
 
 # ------------------------------------------------------------------
 # 6) Prepare report data (enhanced demographics)
 # ------------------------------------------------------------------
-# Check what columns are actually available
-cat("Available columns in reports_df:", paste(names(reports_df), collapse = ", "), "\n")
-
-# Check if HospitalName column exists, if not create a placeholder
-if (!"HospitalName" %in% names(reports_df)) {
-  reports_df$HospitalName <- "Unknown Hospital"
-  cat("Created HospitalName column with placeholder values\n")
-}
-
-# Check what columns are actually available in reports_df
-available_cols_reports <- names(reports_df)
-cat("Available columns in reports_df:", paste(available_cols_reports, collapse = ", "), "\n")
-
 reports_df <- reports_df %>%
   mutate(
-    HospitalClean = if ("HospitalName" %in% available_cols_reports) clean_hosp(HospitalName) else "Unknown Hospital",
-    age_grp       = if ("Age" %in% available_cols_reports) age_binner(Age) else NA,
-    Zipcode       = if ("ZipCode" %in% available_cols_reports) as.character(ZipCode) else "00000",
-    Race          = if ("Race" %in% available_cols_reports) Race else "Unknown",
-    Ethnicity     = if ("Ethnicity" %in% available_cols_reports) Ethnicity else "Unknown"
+    HospitalClean = clean_hosp(HospitalName),
+    age_grp       = age_binner(Age),
+    Zipcode       = as.character(ZipCode),
+    Race          = c_race,
+    Ethnicity     = c_ethnicity
   )
 
 # ------------------------------------------------------------------
@@ -373,24 +332,13 @@ for (d in sort(unique(reports_df$ObvsDate))) {
     
     # ----- COUNT GRAPHS -----
     if (isTRUE(rep_set$Age_Group_Bar)) {
-      # Ensure all age groups are shown with zero counts
-      age_counts <- rep_s %>% 
-        count(age_grp, .drop = FALSE) %>% 
-        filter(!is.na(age_grp)) %>%
-        mutate(n = ifelse(is.na(n), 0, n))
-      
-      p <- plot_ly(age_counts, x = ~age_grp, y = ~n, type = "bar") %>%
+      p <- plot_ly(rep_s, x = ~age_grp, type = "histogram") %>%
         layout(title = glue("Age Group Distribution - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Count"))
       store(dk, sk, "count", "age", p)
     }
     if (isTRUE(rep_set$Age_Gender_Stacked_Bar)) {
-      # Ensure all age groups and sexes are shown with zero counts
-      age_sex_data <- rep_s %>% 
-        count(age_grp, Sex, .drop = FALSE) %>% 
-        filter(!is.na(age_grp), !is.na(Sex)) %>%
-        mutate(n = ifelse(is.na(n), 0, n))
-      
+      age_sex_data <- rep_s %>% count(age_grp, Sex, .drop = FALSE) %>% filter(!is.na(age_grp), !is.na(Sex))
       p <- plot_ly(age_sex_data, x = ~age_grp, y = ~n, color = ~Sex, type = "bar") %>%
         layout(title = glue("Age Group + Gender - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Count"), barmode = "stack")
@@ -421,13 +369,10 @@ for (d in sort(unique(reports_df$ObvsDate))) {
     
     # ----- PER-10K GRAPHS -----
     if (isTRUE(rep_set$Age_Per_10k_Graph)) {
-      num <- rep_s %>% count(age_grp, name = "num", .drop = FALSE) %>% filter(!is.na(age_grp))
+      num <- rep_s %>% count(age_grp, name = "num", .drop = FALSE)
       den <- dplyr::filter(denom_d, demo == "age_grp") %>% select(level, denom)
       df  <- left_join(num, den, by = c("age_grp" = "level")) %>%
-        mutate(
-          num = ifelse(is.na(num), 0, num),
-          rate = round(num / pmax(denom, 1) * 1e4, 1)
-        )
+        mutate(rate = round(num / pmax(denom, 1) * 1e4, 1))
       p <- plot_ly(df, x = ~age_grp, y = ~rate, type = "bar") %>%
         layout(title = glue("Age Group per 10k - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Rate per 10k"))
@@ -534,7 +479,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
           mutate(
             fill_opacity = if_else(count_filled > 0, 0.9, 0.15),
             popup_text   = glue(
-              "ZIP Code: {geo_key}<br/>",
+              "ZCTA/ZIP: {geo_key}<br/>",
               "Syndrome: {syn}<br/>",
               "Date: {d_lbl}<br/>",
               "Count: {count_filled}<br/>",
@@ -555,7 +500,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
           addLegend(
             pal    = pal,
             values = vals,
-            title  = glue("{syn}<br/>{d_lbl}<br/>Case Count"),
+            title  = glue("{syn}<br/>{d_lbl}<br/>Count"),
             position = "bottomright"
           )
         
@@ -579,16 +524,11 @@ for (d in sort(unique(reports_df$ObvsDate))) {
       error = function(e) { message("Climate fetch failed: ", conditionMessage(e)); NULL }
     )
     if (!is.null(wx)) {
-      # Use human-readable station names in the table
-      wx_table <- wx$wide %>%
-        select(StationName, MaxTemp, MinTemp, AvgTemp, Water, Snow) %>%
-        rename(Station = StationName)
-      
-      reports[[dk]]$meta$climate_table <- wx_table
+      reports[[dk]]$meta$climate_table <- wx$wide
       # quick stats row
-      num_cols <- intersect(names(wx_table), c("MaxTemp","MinTemp","AvgTemp","Water","Snow"))
+      num_cols <- intersect(names(wx$wide), c("MaxTemp","MinTemp","AvgTemp","Water","Snow"))
       if (length(num_cols)) {
-        reports[[dk]]$meta$climate_stats <- wx_table %>%
+        reports[[dk]]$meta$climate_stats <- wx$wide %>%
           summarize(across(all_of(num_cols), ~ round(mean(., na.rm = TRUE), 2)), .groups = "drop") %>%
           mutate(Date = d_lbl, .before = 1)
       }
@@ -606,7 +546,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
       # small per-date AQI plot is kept; delete this block if you want table-only:
       if (nrow(aq$stations)) {
         p_aqi <- plot_ly(aq$stations, x = ~Station, y = ~PM25_24hr, type = "bar") %>%
-          layout(title = glue("PM2.5 (24h) — {stringr::str_to_title(rep_set$Air_Quality$county)} County, WA ({d_lbl})"),
+          layout(title = glue("PM2.5 (24h) — {stringr::str_to_title(rep_set$Air_Quality$county)}, WA ({d_lbl})"),
                  xaxis = list(title = "Station"), yaxis = list(title = "µg/m³ (24h)"))
         reports[[dk]]$meta$aqi_plot <- p_aqi
       }
