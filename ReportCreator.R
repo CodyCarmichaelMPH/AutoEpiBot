@@ -248,53 +248,13 @@ age_binner <- (function() {
   force(cuts); force(labs)
   function(x) {
     x_num <- suppressWarnings(as.numeric(x))
-    cut(x_num, breaks = cuts, labels = labs, right = FALSE, ordered_result = TRUE)
+    result <- cut(x_num, breaks = cuts, labels = labs, right = FALSE, ordered_result = TRUE)
+    # Ensure the result is an ordered factor with all levels
+    factor(result, levels = labs, ordered = TRUE)
   }
 })()
 
-# -------- Race and Ethnicity cleaning functions ------------------------------
-c_race <- function(x) {
-  if (is.null(x) || length(x) == 0) return(character(0))
-  if (all(is.na(x))) return(rep(NA_character_, length(x)))
-  
-  x <- as.character(x)
-  x[is.na(x)] <- "Unknown"
-  
-  # Clean up race values
-  x <- tolower(trimws(x))
-  x[x %in% c("", "null", "none", "unknown", "not specified")] <- "Unknown"
-  x[x %in% c("white", "caucasian")] <- "White"
-  x[x %in% c("black", "african american", "african-american")] <- "Black"
-  x[x %in% c("hispanic", "latino", "latina")] <- "Hispanic"
-  x[x %in% c("asian", "asian american")] <- "Asian"
-  x[x %in% c("native american", "american indian", "alaska native")] <- "Native American"
-  x[x %in% c("pacific islander", "native hawaiian")] <- "Pacific Islander"
-  x[x %in% c("other", "mixed", "multiracial")] <- "Other"
-  
-  # Capitalize properly
-  x <- tools::toTitleCase(x)
-  
-  return(x)
-}
 
-c_ethnicity <- function(x) {
-  if (is.null(x) || length(x) == 0) return(character(0))
-  if (all(is.na(x))) return(rep(NA_character_, length(x)))
-  
-  x <- as.character(x)
-  x[is.na(x)] <- "Unknown"
-  
-  # Clean up ethnicity values
-  x <- tolower(trimws(x))
-  x[x %in% c("", "null", "none", "unknown", "not specified")] <- "Unknown"
-  x[x %in% c("hispanic", "latino", "latina", "spanish")] <- "Hispanic"
-  x[x %in% c("non-hispanic", "not hispanic", "non hispanic")] <- "Non-Hispanic"
-  
-  # Capitalize properly
-  x <- tools::toTitleCase(x)
-  
-  return(x)
-}
 
 # ------------------------------------------------------------------
 # 3) Load zipcode GeoJSON AS SF (not list)
@@ -372,8 +332,8 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
       Sex       = Sex,
       Hospital  = clean_hosp(HospitalName),
       Zipcode   = as.character(ZipCode),
-      Race      = c_race,
-      Ethnicity = c_ethnicity
+      Race      = Race,
+      Ethnicity = Ethnicity
     ) %>%
     select(ObvsDate, age_grp, Sex, Hospital, Zipcode, Race, Ethnicity) %>%
     pivot_longer(cols = c(age_grp, Sex, Hospital, Zipcode, Race, Ethnicity),
@@ -395,8 +355,8 @@ reports_df <- reports_df %>%
     HospitalClean = clean_hosp(HospitalName),
     age_grp       = age_binner(Age),
     Zipcode       = as.character(ZipCode),
-    Race          = c_race,
-    Ethnicity     = c_ethnicity
+    Race          = Race,
+    Ethnicity     = Ethnicity
   )
 
 # ------------------------------------------------------------------
@@ -439,13 +399,24 @@ for (d in sort(unique(reports_df$ObvsDate))) {
     
     # ----- COUNT GRAPHS -----
     if (isTRUE(rep_set$Age_Group_Bar)) {
-      p <- plot_ly(rep_s, x = ~age_grp, type = "histogram") %>%
+      # Ensure all age groups are shown with zero counts
+      age_counts <- rep_s %>% 
+        count(age_grp, .drop = FALSE) %>% 
+        filter(!is.na(age_grp)) %>%
+        mutate(n = ifelse(is.na(n), 0, n))
+      
+      p <- plot_ly(age_counts, x = ~age_grp, y = ~n, type = "bar") %>%
         layout(title = glue("Age Group Distribution - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Count"))
       store(dk, sk, "count", "age", p)
     }
     if (isTRUE(rep_set$Age_Gender_Stacked_Bar)) {
-      age_sex_data <- rep_s %>% count(age_grp, Sex, .drop = FALSE) %>% filter(!is.na(age_grp), !is.na(Sex))
+      # Ensure all age groups and sexes are shown with zero counts
+      age_sex_data <- rep_s %>% 
+        count(age_grp, Sex, .drop = FALSE) %>% 
+        filter(!is.na(age_grp), !is.na(Sex)) %>%
+        mutate(n = ifelse(is.na(n), 0, n))
+      
       p <- plot_ly(age_sex_data, x = ~age_grp, y = ~n, color = ~Sex, type = "bar") %>%
         layout(title = glue("Age Group + Gender - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Count"), barmode = "stack")
@@ -476,10 +447,13 @@ for (d in sort(unique(reports_df$ObvsDate))) {
     
     # ----- PER-10K GRAPHS -----
     if (isTRUE(rep_set$Age_Per_10k_Graph)) {
-      num <- rep_s %>% count(age_grp, name = "num", .drop = FALSE)
+      num <- rep_s %>% count(age_grp, name = "num", .drop = FALSE) %>% filter(!is.na(age_grp))
       den <- dplyr::filter(denom_d, demo == "age_grp") %>% select(level, denom)
       df  <- left_join(num, den, by = c("age_grp" = "level")) %>%
-        mutate(rate = round(num / pmax(denom, 1) * 1e4, 1))
+        mutate(
+          num = ifelse(is.na(num), 0, num),
+          rate = round(num / pmax(denom, 1) * 1e4, 1)
+        )
       p <- plot_ly(df, x = ~age_grp, y = ~rate, type = "bar") %>%
         layout(title = glue("Age Group per 10k - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Rate per 10k"))
