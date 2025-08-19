@@ -37,6 +37,14 @@ if (!dir.exists(reports_dir)) dir.create(reports_dir, recursive = TRUE, showWarn
 fmt_api    <- function(x) format(as.Date(x), "%d%b%Y")               # for ESSENCE API
 pad_zip    <- function(z) stringr::str_pad(as.character(z), 5, pad = "0")
 clean_hosp <- function(x) {
+  # Handle NULL, NA, or empty values
+  if (is.null(x) || length(x) == 0) return(character(0))
+  if (all(is.na(x))) return(rep(NA_character_, length(x)))
+  
+  # Convert to character and handle NA values
+  x <- as.character(x)
+  x[is.na(x)] <- "Unknown"
+  
   # Remove common prefixes and clean up hospital names
   cleaned <- sub("^.*?_", "", x)  # Remove prefix before underscore
   cleaned <- sub("^.*?-", "", cleaned)  # Remove prefix before dash
@@ -244,6 +252,50 @@ age_binner <- (function() {
   }
 })()
 
+# -------- Race and Ethnicity cleaning functions ------------------------------
+c_race <- function(x) {
+  if (is.null(x) || length(x) == 0) return(character(0))
+  if (all(is.na(x))) return(rep(NA_character_, length(x)))
+  
+  x <- as.character(x)
+  x[is.na(x)] <- "Unknown"
+  
+  # Clean up race values
+  x <- tolower(trimws(x))
+  x[x %in% c("", "null", "none", "unknown", "not specified")] <- "Unknown"
+  x[x %in% c("white", "caucasian")] <- "White"
+  x[x %in% c("black", "african american", "african-american")] <- "Black"
+  x[x %in% c("hispanic", "latino", "latina")] <- "Hispanic"
+  x[x %in% c("asian", "asian american")] <- "Asian"
+  x[x %in% c("native american", "american indian", "alaska native")] <- "Native American"
+  x[x %in% c("pacific islander", "native hawaiian")] <- "Pacific Islander"
+  x[x %in% c("other", "mixed", "multiracial")] <- "Other"
+  
+  # Capitalize properly
+  x <- tools::toTitleCase(x)
+  
+  return(x)
+}
+
+c_ethnicity <- function(x) {
+  if (is.null(x) || length(x) == 0) return(character(0))
+  if (all(is.na(x))) return(rep(NA_character_, length(x)))
+  
+  x <- as.character(x)
+  x[is.na(x)] <- "Unknown"
+  
+  # Clean up ethnicity values
+  x <- tolower(trimws(x))
+  x[x %in% c("", "null", "none", "unknown", "not specified")] <- "Unknown"
+  x[x %in% c("hispanic", "latino", "latina", "spanish")] <- "Hispanic"
+  x[x %in% c("non-hispanic", "not hispanic", "non hispanic")] <- "Non-Hispanic"
+  
+  # Capitalize properly
+  x <- tools::toTitleCase(x)
+  
+  return(x)
+}
+
 # ------------------------------------------------------------------
 # 3) Load zipcode GeoJSON AS SF (not list)
 # ------------------------------------------------------------------
@@ -306,6 +358,12 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
   cat("Pulling all visits for", as.character(d), "...\n")
   js <- fromJSON(ess_txt(all_url(d)), flatten = TRUE)$dataDetails
   if (is.null(js) || nrow(js) == 0) return(tibble())
+  
+  # Check if HospitalName column exists in the API response
+  if (!"HospitalName" %in% names(js)) {
+    js$HospitalName <- "Unknown Hospital"
+  }
+  
   js %>%
     dedupe() %>%
     mutate(
@@ -327,6 +385,11 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
 # ------------------------------------------------------------------
 # 6) Prepare report data (enhanced demographics)
 # ------------------------------------------------------------------
+# Check if HospitalName column exists, if not create a placeholder
+if (!"HospitalName" %in% names(reports_df)) {
+  reports_df$HospitalName <- "Unknown Hospital"
+}
+
 reports_df <- reports_df %>%
   mutate(
     HospitalClean = clean_hosp(HospitalName),
