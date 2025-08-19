@@ -324,6 +324,9 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
     js$HospitalName <- "Unknown Hospital"
   }
   
+  # Check what columns are available in the API response
+  cat("Available columns in API response:", paste(names(js), collapse = ", "), "\n")
+  
   js %>%
     dedupe() %>%
     mutate(
@@ -345,9 +348,13 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
 # ------------------------------------------------------------------
 # 6) Prepare report data (enhanced demographics)
 # ------------------------------------------------------------------
+# Check what columns are actually available
+cat("Available columns in reports_df:", paste(names(reports_df), collapse = ", "), "\n")
+
 # Check if HospitalName column exists, if not create a placeholder
 if (!"HospitalName" %in% names(reports_df)) {
   reports_df$HospitalName <- "Unknown Hospital"
+  cat("Created HospitalName column with placeholder values\n")
 }
 
 reports_df <- reports_df %>%
