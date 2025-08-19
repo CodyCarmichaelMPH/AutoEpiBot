@@ -37,52 +37,8 @@ if (!dir.exists(reports_dir)) dir.create(reports_dir, recursive = TRUE, showWarn
 fmt_api    <- function(x) format(as.Date(x), "%d%b%Y")               # for ESSENCE API
 pad_zip    <- function(z) stringr::str_pad(as.character(z), 5, pad = "0")
 clean_hosp <- function(x) {
-  # Handle NULL, NA, or empty values
-  if (is.null(x) || length(x) == 0) return(character(0))
-  if (all(is.na(x))) return(rep(NA_character_, length(x)))
-  
-  # Convert to character and handle NA values
-  x <- as.character(x)
-  x[is.na(x)] <- "Unknown"
-  
-  # Remove common prefixes and clean up hospital names
-  cleaned <- sub("^.*?_", "", x)  # Remove prefix before underscore
-  cleaned <- sub("^.*?-", "", cleaned)  # Remove prefix before dash
-  cleaned <- sub("^.*?\\s+", "", cleaned)  # Remove prefix before first space
-  
-  # Common hospital name mappings for better readability
-  hosp_mappings <- c(
-    "prov" = "Providence",
-    "swedish" = "Swedish",
-    "virginia mason" = "Virginia Mason",
-    "uwmc" = "UW Medical Center",
-    "harborview" = "Harborview",
-    "valley" = "Valley Medical",
-    "evergreen" = "Evergreen",
-    "overlake" = "Overlake",
-    "multicare" = "MultiCare",
-    "st joseph" = "St. Joseph",
-    "st mary" = "St. Mary",
-    "st anthony" = "St. Anthony",
-    "st clare" = "St. Clare",
-    "st francis" = "St. Francis",
-    "st luke" = "St. Luke",
-    "st peter" = "St. Peter",
-    "st vincent" = "St. Vincent"
-  )
-  
-  # Apply mappings (case insensitive)
-  for (pattern in names(hosp_mappings)) {
-    if (grepl(pattern, tolower(cleaned))) {
-      cleaned <- hosp_mappings[pattern]
-      break
-    }
-  }
-  
-  # Capitalize properly
-  cleaned <- tools::toTitleCase(tolower(cleaned))
-  
-  return(cleaned)
+  # Simple identity function - just return the input as-is
+  return(x)
 }
 dedupe     <- function(df) dplyr::distinct(df, .data$C_BioSense_ID, .keep_all = TRUE)
 `%||%`     <- function(a, b) if (!is.null(a)) a else b
