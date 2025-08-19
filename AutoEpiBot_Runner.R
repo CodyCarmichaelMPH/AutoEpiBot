@@ -21,7 +21,7 @@ workflow_scripts <- c(
   "TSCreate.R",             # 2. Pull time series data from ESSENCE
   "TSInvestigate.R",        # 3. Investigate alerts and filter false positives
   "ReportCreator.R",        # 4. Generate comprehensive visualizations and maps
-  "HTMLReportGenerator.R",  # 5. Create individual HTML reports per syndrome+date
+  "render_autoepi_reports.R",  # 5. Create individual HTML reports per syndrome+date
   "EmailCreator.R"          # 6. Send email summary with attachments
 )
 
@@ -31,7 +31,7 @@ script_descriptions <- c(
   "Pulling time series data from ESSENCE API",
   "Investigating alerts and filtering false positives", 
   "Generating comprehensive visualizations and maps",
-  "Creating individual HTML reports per syndrome+date",
+  "Rendering individual HTML reports per syndrome+date",
   "Preparing and sending email summary with attachments"
 )
 
@@ -81,8 +81,22 @@ for (i in seq_along(workflow_scripts)) {
   step_start <- Sys.time()
   
   tryCatch({
-    # Execute the script
-    source(script_name)
+    # Execute the script based on its type
+    if (script_name == "render_autoepi_reports.R") {
+      # This script expects settings file as argument, can auto-discover report files
+      system2("Rscript", args = c(script_name, "AutoEpi_Settings.RData"), 
+              stdout = TRUE, stderr = TRUE)
+    } else if (script_name == "EmailCreator.R") {
+      # This script expects settings and logs file as arguments
+      if (!exists("LogsFileLoc")) {
+        load("LogsFileLoc.RData")
+      }
+      system2("Rscript", args = c(script_name, "AutoEpi_Settings.RData", LogsFileLoc), 
+              stdout = TRUE, stderr = TRUE)
+    } else {
+      # Standard scripts that can be sourced
+      source(script_name)
+    }
     
     step_end <- Sys.time()
     step_duration <- round(as.numeric(step_end - step_start, units = "secs"), 1)

@@ -36,7 +36,46 @@ if (!dir.exists(reports_dir)) dir.create(reports_dir, recursive = TRUE, showWarn
 # ------------------------------------------------------------------
 fmt_api    <- function(x) format(as.Date(x), "%d%b%Y")               # for ESSENCE API
 pad_zip    <- function(z) stringr::str_pad(as.character(z), 5, pad = "0")
-clean_hosp <- function(x) sub("^.*?_", "", x)
+clean_hosp <- function(x) {
+  # Remove common prefixes and clean up hospital names
+  cleaned <- sub("^.*?_", "", x)  # Remove prefix before underscore
+  cleaned <- sub("^.*?-", "", cleaned)  # Remove prefix before dash
+  cleaned <- sub("^.*?\\s+", "", cleaned)  # Remove prefix before first space
+  
+  # Common hospital name mappings for better readability
+  hosp_mappings <- c(
+    "prov" = "Providence",
+    "swedish" = "Swedish",
+    "virginia mason" = "Virginia Mason",
+    "uwmc" = "UW Medical Center",
+    "harborview" = "Harborview",
+    "valley" = "Valley Medical",
+    "evergreen" = "Evergreen",
+    "overlake" = "Overlake",
+    "multicare" = "MultiCare",
+    "st joseph" = "St. Joseph",
+    "st mary" = "St. Mary",
+    "st anthony" = "St. Anthony",
+    "st clare" = "St. Clare",
+    "st francis" = "St. Francis",
+    "st luke" = "St. Luke",
+    "st peter" = "St. Peter",
+    "st vincent" = "St. Vincent"
+  )
+  
+  # Apply mappings (case insensitive)
+  for (pattern in names(hosp_mappings)) {
+    if (grepl(pattern, tolower(cleaned))) {
+      cleaned <- hosp_mappings[pattern]
+      break
+    }
+  }
+  
+  # Capitalize properly
+  cleaned <- tools::toTitleCase(tolower(cleaned))
+  
+  return(cleaned)
+}
 dedupe     <- function(df) dplyr::distinct(df, .data$C_BioSense_ID, .keep_all = TRUE)
 `%||%`     <- function(a, b) if (!is.null(a)) a else b
 
@@ -74,13 +113,13 @@ ess_txt <- function(u) httr::content(httr::GET(u, authenticate(usr, pwd)), as = 
 
 # External data helpers (optional pretty names; not required for matching)
 CLIMATE_STATIONS <- c(
-  "pdt-eln"="Ellensburg, Washington","otx-lws"="Lewiston, Idaho",
-  "pdt-dls"="Dallesport, Washington","pdt-psc"="Pasco, Washington",
-  "sew-sew"="Seattle, Washington","otx-geg"="Spokane, Washington",
-  "pqr-vuo"="Vancouver, Washington","pdt-alw"="Walla Walla, Washington",
-  "otx-eat"="Wenatchee, Washington","pdt-ykm"="Yakima, Washington",
-  "sew-olm"="Olympia, Washington","otx-omk"="Omak, Washington",
-  "sew-bli"="Bellingham, Washington","otx-dew"="Deer Park, Washington"
+  "pdt-eln"="Ellensburg, WA","otx-lws"="Lewiston, ID",
+  "pdt-dls"="Dallesport, WA","pdt-psc"="Pasco, WA",
+  "sew-sew"="Seattle, WA","otx-geg"="Spokane, WA",
+  "pqr-vuo"="Vancouver, WA","pdt-alw"="Walla Walla, WA",
+  "otx-eat"="Wenatchee, WA","pdt-ykm"="Yakima, WA",
+  "sew-olm"="Olympia, WA","otx-omk"="Omak, WA",
+  "sew-bli"="Bellingham, WA","otx-dew"="Deer Park, WA"
 )
 
 # -------- Climate fetcher (single call; schema proven by smoke test) ----------
@@ -104,6 +143,7 @@ fetch_climate_data <- function(date, station_ids, verbose = FALSE) {
     transmute(
       StationRaw = as.character(.data[["Location"]] %||% NA_character_),
       Station    = tolower(StationRaw),
+      StationName = CLIMATE_STATIONS[tolower(StationRaw)] %||% StationRaw,
       DateStr    = .data[["Date"]] %||% NA_character_,
       MaxTemp    = safe_num(.data[["MaxTemp"]]),
       MinTemp    = safe_num(.data[["MinTemp"]]),
@@ -159,6 +199,10 @@ fetch_air_quality_data <- function(date, county) {
     PM25_24hr  = safe_num(dd[[val_col]])
   ) %>%
     mutate(
+      # Clean up station names for better readability
+      Station = ifelse(!is.na(Station), 
+                      tools::toTitleCase(tolower(Station)), 
+                      Station),
       Category = dplyr::case_when(
         is.na(PM25_24hr)   ~ NA_character_,
         PM25_24hr <= 12.0  ~ "Good",
@@ -479,7 +523,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
           mutate(
             fill_opacity = if_else(count_filled > 0, 0.9, 0.15),
             popup_text   = glue(
-              "ZCTA/ZIP: {geo_key}<br/>",
+              "ZIP Code: {geo_key}<br/>",
               "Syndrome: {syn}<br/>",
               "Date: {d_lbl}<br/>",
               "Count: {count_filled}<br/>",
@@ -500,7 +544,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
           addLegend(
             pal    = pal,
             values = vals,
-            title  = glue("{syn}<br/>{d_lbl}<br/>Count"),
+            title  = glue("{syn}<br/>{d_lbl}<br/>Case Count"),
             position = "bottomright"
           )
         
@@ -524,11 +568,16 @@ for (d in sort(unique(reports_df$ObvsDate))) {
       error = function(e) { message("Climate fetch failed: ", conditionMessage(e)); NULL }
     )
     if (!is.null(wx)) {
-      reports[[dk]]$meta$climate_table <- wx$wide
+      # Use human-readable station names in the table
+      wx_table <- wx$wide %>%
+        select(StationName, MaxTemp, MinTemp, AvgTemp, Water, Snow) %>%
+        rename(Station = StationName)
+      
+      reports[[dk]]$meta$climate_table <- wx_table
       # quick stats row
-      num_cols <- intersect(names(wx$wide), c("MaxTemp","MinTemp","AvgTemp","Water","Snow"))
+      num_cols <- intersect(names(wx_table), c("MaxTemp","MinTemp","AvgTemp","Water","Snow"))
       if (length(num_cols)) {
-        reports[[dk]]$meta$climate_stats <- wx$wide %>%
+        reports[[dk]]$meta$climate_stats <- wx_table %>%
           summarize(across(all_of(num_cols), ~ round(mean(., na.rm = TRUE), 2)), .groups = "drop") %>%
           mutate(Date = d_lbl, .before = 1)
       }
@@ -546,7 +595,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
       # small per-date AQI plot is kept; delete this block if you want table-only:
       if (nrow(aq$stations)) {
         p_aqi <- plot_ly(aq$stations, x = ~Station, y = ~PM25_24hr, type = "bar") %>%
-          layout(title = glue("PM2.5 (24h) — {stringr::str_to_title(rep_set$Air_Quality$county)}, WA ({d_lbl})"),
+          layout(title = glue("PM2.5 (24h) — {stringr::str_to_title(rep_set$Air_Quality$county)} County, WA ({d_lbl})"),
                  xaxis = list(title = "Station"), yaxis = list(title = "µg/m³ (24h)"))
         reports[[dk]]$meta$aqi_plot <- p_aqi
       }

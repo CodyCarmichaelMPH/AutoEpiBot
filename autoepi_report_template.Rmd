@@ -49,21 +49,25 @@ pluck_plot_title <- function(w) {
   }, error = function(e) NULL)
 }
 
-# Parse a date-like thing to "YYYY-MM-DD" or "MM-DD-YYYY" depending on input
+# Parse a date-like thing to "MM-DD-YYYY" format for human readability
 fmt_date_label <- function(d) {
-  if (inherits(d, "Date")) return(format(d, "%Y-%m-%d"))
+  if (inherits(d, "Date")) return(format(d, "%m-%d-%Y"))
   if (is.numeric(d) && !is.na(d)) {
     s <- as.character(d)
-    if (nchar(s) == 8) return(format(as.Date(s, "%Y%m%d"), "%Y-%m-%d"))
+    if (nchar(s) == 8) return(format(as.Date(s, "%Y%m%d"), "%m-%d-%Y"))
   }
   if (is.character(d) && nzchar(d)) {
     s <- d[1]
-    # Accept common forms
-    if (grepl("^\\d{4}-\\d{2}-\\d{2}$", s)) return(s)
-    if (grepl("^\\d{8}$", s)) return(format(as.Date(s, "%Y%m%d"), "%Y-%m-%d"))
+    # Accept common forms and convert to MM-DD-YYYY
+    if (grepl("^\\d{4}-\\d{2}-\\d{2}$", s)) return(format(as.Date(s), "%m-%d-%Y"))
+    if (grepl("^\\d{8}$", s)) return(format(as.Date(s, "%Y%m%d"), "%m-%d-%Y"))
     if (grepl("^\\d{2}/\\d{2}/\\d{4}$", s)) {
-      # mm/dd/yyyy -> yyyy-mm-dd
-      return(format(as.Date(s, "%m/%d/%Y"), "%Y-%m-%d"))
+      # mm/dd/yyyy -> mm-dd-yyyy
+      return(format(as.Date(s, "%m/%d/%Y"), "%m-%d-%Y"))
+    }
+    if (grepl("^\\d{2}-\\d{2}-\\d{4}$", s)) {
+      # Already in mm-dd-yyyy format
+      return(s)
     }
   }
   NA_character_
@@ -153,12 +157,12 @@ clim_stats <- params$meta$climate_stats %||% NULL
 
 if (has(clim_stats)) {
   cat("## Climate – Summary\n")
-  print(safekable(clim_stats, caption = "Climate Averages (across included stations)"))
+  print(safekable(clim_stats, caption = "Weather Summary - Daily Averages"))
 }
 
 if (has(clim_tab)) {
   cat("## Climate – Stations\n")
-  print(safekable(clim_tab, caption = "Station Readings"))
+  print(safekable(clim_tab, caption = "Weather Station Readings"))
 }
 ```
 
@@ -174,12 +178,12 @@ if (has(aqi_plot)) {
   aqi_plot
 } else if (has(aqi_summary)) {
   cat("## AQI – PM2.5 (24-hr) Summary\n")
-  print(safekable(aqi_summary, caption = "County-Level Summary"))
+  print(safekable(aqi_summary, caption = "Air Quality - County Summary"))
 }
 
 if (has(aqi_stn)) {
   cat("### AQI – Stations\n")
-  print(safekable(aqi_stn, caption = "Station Measurements"))
+  print(safekable(aqi_stn, caption = "Air Quality - Station Measurements"))
 }
 ```
 
