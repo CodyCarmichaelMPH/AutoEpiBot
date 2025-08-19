@@ -221,7 +221,7 @@ The AutoEpi system uses a two-stage process:
 Records marked as False Positive passed initial detection but failed the statistical threshold test during investigation.
 
 File Locations:
-- Logs File: {logs_path}
+- Logs File: {LogsFileLoc}
 - Reports Directory: {reports_dir}
 - Rendered Reports: {rendered_root}
 
@@ -288,9 +288,9 @@ tryCatch({
 # Update Logs
 # -----------------------
 # Save updated logs
-backup_path <- paste0(logs_path, ".bak")
-file.copy(logs_path, backup_path, overwrite = TRUE)
-write_csv(logs_updated, logs_path)
+backup_path <- paste0(LogsFileLoc, ".bak")
+file.copy(LogsFileLoc, backup_path, overwrite = TRUE)
+write_csv(logs_updated, LogsFileLoc)
 
 cat("\nLogs updated and backed up to:", backup_path, "\n")
 cat("Email sent status updated in logs.\n")
