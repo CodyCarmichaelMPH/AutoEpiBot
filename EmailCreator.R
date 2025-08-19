@@ -17,19 +17,8 @@ if (!requireNamespace("RDCOMClient", quietly = TRUE)) {
 # -----------------------
 # Configuration
 # -----------------------
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 2) {
-  stop("Usage: Rscript EmailCreator.R <settings_path> <logs_csv_path>")
-}
-
-settings_path <- args[[1]]
-logs_path <- args[[2]]
-
-if (!file.exists(settings_path)) stop("Settings file not found: ", settings_path)
-if (!file.exists(logs_path)) stop("Logs file not found: ", logs_path)
-
 # Load required data files
-load(settings_path)  # loads autoepi_settings
+load("AutoEpi_Settings.RData")  # loads autoepi_settings
 
 # Load additional data files if they exist
 if (file.exists("LogsFileLoc.RData")) {
@@ -78,8 +67,11 @@ report_index <- tibble::tibble(
   syndrome_key = str_match(file, "__(.*?)__AutoEpi.html$")[,2]
 )
 
-# Load logs
-logs <- read_csv(logs_path, show_col_types = FALSE)
+# Load logs using LogsFileLoc from LogsFileLoc.RData
+if (!exists("LogsFileLoc")) {
+  load("LogsFileLoc.RData")  # loads LogsFileLoc
+}
+logs <- read_csv(LogsFileLoc, show_col_types = FALSE)
 
 # Normalize column names (handle case variations)
 col_names <- tolower(names(logs))

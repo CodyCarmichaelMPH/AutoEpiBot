@@ -86,13 +86,6 @@ for (i in seq_along(workflow_scripts)) {
       # This script expects settings file as argument, can auto-discover report files
       system2("Rscript", args = c(script_name, "AutoEpi_Settings.RData"), 
               stdout = TRUE, stderr = TRUE)
-    } else if (script_name == "EmailCreator.R") {
-      # This script expects settings and logs file as arguments
-      if (!exists("LogsFileLoc")) {
-        load("LogsFileLoc.RData")
-      }
-      system2("Rscript", args = c(script_name, "AutoEpi_Settings.RData", LogsFileLoc), 
-              stdout = TRUE, stderr = TRUE)
     } else {
       # Standard scripts that can be sourced
       source(script_name)
