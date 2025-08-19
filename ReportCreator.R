@@ -283,22 +283,29 @@ all_visits <- map_dfr(unique(reports_df$ObvsDate), function(d) {
   # Check what columns are available in the API response
   cat("Available columns in API response:", paste(names(js), collapse = ", "), "\n")
   
-  js %>%
+  # Check what columns are actually available and handle missing ones
+  available_cols <- names(js)
+  cat("Available columns in API response:", paste(available_cols, collapse = ", "), "\n")
+  
+  # Create a safe version of the data with fallbacks for missing columns
+  safe_data <- js %>%
     dedupe() %>%
     mutate(
       ObvsDate  = d,
-      age_grp   = age_binner(Age),
-      Sex       = Sex,
-      Hospital  = clean_hosp(HospitalName),
-      Zipcode   = as.character(ZipCode),
-      Race      = Race,
-      Ethnicity = Ethnicity
+      age_grp   = if ("Age" %in% available_cols) age_binner(Age) else NA,
+      Sex       = if ("Sex" %in% available_cols) Sex else "Unknown",
+      Hospital  = if ("HospitalName" %in% available_cols) clean_hosp(HospitalName) else "Unknown Hospital",
+      Zipcode   = if ("ZipCode" %in% available_cols) as.character(ZipCode) else "00000",
+      Race      = if ("Race" %in% available_cols) Race else "Unknown",
+      Ethnicity = if ("Ethnicity" %in% available_cols) Ethnicity else "Unknown"
     ) %>%
     select(ObvsDate, age_grp, Sex, Hospital, Zipcode, Race, Ethnicity) %>%
     pivot_longer(cols = c(age_grp, Sex, Hospital, Zipcode, Race, Ethnicity),
                  names_to = "demo", values_to = "level") %>%
     count(ObvsDate, demo, level, name = "denom") %>%
     filter(!is.na(level), level != "", level != "Unknown")
+  
+  return(safe_data)
 })
 
 # ------------------------------------------------------------------
@@ -313,13 +320,17 @@ if (!"HospitalName" %in% names(reports_df)) {
   cat("Created HospitalName column with placeholder values\n")
 }
 
+# Check what columns are actually available in reports_df
+available_cols_reports <- names(reports_df)
+cat("Available columns in reports_df:", paste(available_cols_reports, collapse = ", "), "\n")
+
 reports_df <- reports_df %>%
   mutate(
-    HospitalClean = clean_hosp(HospitalName),
-    age_grp       = age_binner(Age),
-    Zipcode       = as.character(ZipCode),
-    Race          = Race,
-    Ethnicity     = Ethnicity
+    HospitalClean = if ("HospitalName" %in% available_cols_reports) clean_hosp(HospitalName) else "Unknown Hospital",
+    age_grp       = if ("Age" %in% available_cols_reports) age_binner(Age) else NA,
+    Zipcode       = if ("ZipCode" %in% available_cols_reports) as.character(ZipCode) else "00000",
+    Race          = if ("Race" %in% available_cols_reports) Race else "Unknown",
+    Ethnicity     = if ("Ethnicity" %in% available_cols_reports) Ethnicity else "Unknown"
   )
 
 # ------------------------------------------------------------------
