@@ -121,18 +121,20 @@ infer_syndrome <- function(report, syn_key) {
 # Station name mapping function
 map_station_name <- function(station_raw) {
   station_map <- c(
-    "sew-OLM" = "Olympia",
-    "sew-SEA" = "Seattle",
-    "sew-TAC" = "Tacoma",
-    "sew-SPO" = "Spokane",
-    "sew-YAK" = "Yakima",
-    "sew-VAN" = "Vancouver",
-    "sew-BEL" = "Bellevue",
-    "sew-EVE" = "Everett",
-    "sew-KEN" = "Kennewick",
-    "sew-PAS" = "Pasco",
-    "sew-RIC" = "Richland",
-    "sew-TRI" = "Tri-Cities"
+    "pdt-eln" = "Ellensburg, Washington",
+    "otx-lws" = "Lewiston, Idaho",
+    "pdt-dls" = "Dallesport, Washington",
+    "pdt-psc" = "Pasco, Washington",
+    "sew-sew" = "Seattle, Washington",
+    "otx-geg" = "Spokane, Washington",
+    "pqr-vuo" = "Vancouver, Washington",
+    "pdt-alw" = "Walla Walla, Washington",
+    "otx-eat" = "Wenatchee, Washington",
+    "pdt-ykm" = "Yakima, Washington",
+    "sew-olm" = "Olympia, Washington",
+    "otx-omk" = "Omak, Washington",
+    "sew-bli" = "Bellingham, Washington",
+    "otx-dew" = "Deer Park, Washington"
   )
   ifelse(station_raw %in% names(station_map), station_map[station_raw], station_raw)
 }
@@ -190,8 +192,8 @@ if (has(clim_tab)) {
   cat("## Climate Stations\n")
   # Apply station name mapping if StationRaw column exists
   if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
-    clim_tab$ClimateStation <- map_station_name(clim_tab$StationRaw)
-    clim_tab_display <- clim_tab %>% select(-StationRaw) %>% rename(`Climate Station` = ClimateStation)
+    clim_tab$Station <- map_station_name(clim_tab$StationRaw)
+    clim_tab_display <- clim_tab %>% select(-StationRaw)
   } else {
     clim_tab_display <- clim_tab
   }
@@ -218,8 +220,8 @@ if (has(aqi_stn)) {
   cat("### AQI Stations\n")
   # Apply station name mapping if StationID column exists
   if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
-    aqi_stn$AQIStation <- map_station_name(aqi_stn$StationID)
-    aqi_stn_display <- aqi_stn %>% select(-StationID) %>% rename(`AQI Station` = AQIStation)
+    aqi_stn$Station <- map_station_name(aqi_stn$StationID)
+    aqi_stn_display <- aqi_stn %>% select(-StationID)
   } else {
     aqi_stn_display <- aqi_stn
   }
