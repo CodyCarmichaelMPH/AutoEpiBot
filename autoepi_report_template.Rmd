@@ -136,7 +136,11 @@ map_station_name <- function(station_raw) {
     "sew-bli" = "Bellingham",
     "otx-dew" = "Deer Park"
   )
-  ifelse(station_raw %in% names(station_map), station_map[station_raw], station_raw)
+  # Convert input to lowercase for case-insensitive matching
+  station_raw_lower <- tolower(station_raw)
+  # Find the matching key (also converted to lowercase for comparison)
+  matched_key <- names(station_map)[tolower(names(station_map)) == station_raw_lower]
+  ifelse(length(matched_key) > 0, station_map[matched_key[1]], station_raw)
 }
 
 # Age group ordering function
