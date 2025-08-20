@@ -128,8 +128,9 @@ for (i in seq_len(nrow(syndromes))) {
       ObvsDate       = as.Date(date),
       presented_name = s_name,
       AlertLevel     = factor(case_when(
-        colorID == 3 ~ "Alert",
+        colorID >= 3 ~ "Alert",
         colorID == 2 ~ "Warning",
+        colorID <= 1 ~ "Normal",
         TRUE         ~ "Normal"
       ), levels = log_levels),
       count,

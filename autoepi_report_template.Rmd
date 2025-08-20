@@ -1,5 +1,5 @@
 ---
-title: "AutoEpi: Daily Syndrome Report"
+title: "AutoEpi Daily Syndrome Report"
 subtitle: "Automated RMarkdown Template"
 output:
   html_document:
@@ -136,12 +136,12 @@ h1, h2, h3 { margin-top: 1.4em; }
 # Report Overview
 
 - **Date (inferred):** `r .date_label`
-- **Date (key):** `r params$date_key %||% "—"`  
+- **Date (key):** `r params$date_key %||% "N/A"`  
 - **Syndrome (inferred):** `r .syndrome_label`
-- **Syndrome (key):** `r params$syndrome_key %||% "—"`  
+- **Syndrome (key):** `r params$syndrome_key %||% "N/A"`  
 - **Generated:** `r format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")`
 
-This report compiles **counts**, **per-10k rates**, and an optional **ZIP/ZCTA choropleth** for the selected syndrome and date. It also includes **per-date meta** for climate and air quality (PM2.5 24-hr).
+This report compiles counts, per-10k rates, and an optional ZIP/ZCTA choropleth for the selected syndrome and date. It also includes per-date meta for climate and air quality (PM2.5 24-hr).
 
 ---
 
@@ -152,12 +152,12 @@ clim_tab   <- params$meta$climate_table %||% NULL
 clim_stats <- params$meta$climate_stats %||% NULL
 
 if (has(clim_stats)) {
-  cat("## Climate – Summary\n")
+  cat("## Climate Summary\n")
   print(safekable(clim_stats, caption = "Climate Averages (across included stations)"))
 }
 
 if (has(clim_tab)) {
-  cat("## Climate – Stations\n")
+  cat("## Climate Stations\n")
   print(safekable(clim_tab, caption = "Station Readings"))
 }
 ```
@@ -170,22 +170,22 @@ aqi_summary <- params$meta$aqi_summary %||% NULL
 aqi_stn     <- params$meta$aqi_stations %||% NULL
 
 if (has(aqi_plot)) {
-  cat("## AQI – PM2.5 (24-hr)\n")
+  cat("## AQI PM2.5 (24-hr)\n")
   aqi_plot
 } else if (has(aqi_summary)) {
-  cat("## AQI – PM2.5 (24-hr) Summary\n")
+  cat("## AQI PM2.5 (24-hr) Summary\n")
   print(safekable(aqi_summary, caption = "County-Level Summary"))
 }
 
 if (has(aqi_stn)) {
-  cat("### AQI – Stations\n")
+  cat("### AQI Stations\n")
   print(safekable(aqi_stn, caption = "Station Measurements"))
 }
 ```
 
 # Counts
 
-The following sections display **counts** by demographic or facility dimension. If an element is missing in the input object, it will be omitted automatically.
+The following sections display counts by demographic or facility dimension. If an element is missing in the input object, it will be omitted automatically.
 
 ```{r counts, results="asis"}
 cnt <- params$report$count %||% list()
@@ -214,7 +214,7 @@ if (has(cnt$ethnicity)) {
 
 # Per-10k Rates
 
-Rates are computed upstream using the **all-visits denominators** for the report date. Sections render only if corresponding widgets exist.
+Rates are computed upstream using the all-visits denominators for the report date. Sections render only if corresponding widgets exist.
 
 ```{r per10k, results="asis"}
 r10 <- params$report$per10k %||% list()
@@ -235,7 +235,7 @@ if (has(r10$hospital)) {
 
 # Map
 
-If available, the map displays **counts by ZIP/ZCTA** for the report date and syndrome. Polygons with zero counts are rendered with low opacity to retain geographic context.
+If available, the map displays counts by ZIP/ZCTA for the report date and syndrome. Polygons with zero counts are rendered with low opacity to retain geographic context.
 
 ```{r maps, results="asis"}
 mp <- params$report$maps %||% list()
@@ -247,12 +247,12 @@ if (has(mp$choropleth)) {
 
 # Notes & Methods
 
-- **Data source:** NSSP ESSENCE (as configured in the generating pipeline).
-- **Date scope:** Single date per report; meta (climate/AQI) is per-date and reused for all syndromes on that date.
-- **Demographics:** Age groups are derived from settings. Unknown/empty categories may be omitted upstream.
-- **Per-10k rates:** Numerators from the selected syndrome subset; denominators from all visits on the same date.
-- **Mapping:** ZIP→ZCTA crosswalk (if configured) is applied upstream to drop PO Box/unique ZIPs and aggregate to ZCTAs before joining to geometry.
-- **Reproducibility:** All visualizations are pre-built htmlwidgets; this template does not re-query external services.
+- Data source: NSSP ESSENCE (as configured in the generating pipeline).
+- Date scope: Single date per report; meta (climate/AQI) is per-date and reused for all syndromes on that date.
+- Demographics: Age groups are derived from settings. Unknown/empty categories may be omitted upstream.
+- Per-10k rates: Numerators from the selected syndrome subset; denominators from all visits on the same date.
+- Mapping: ZIP to ZCTA crosswalk (if configured) is applied upstream to drop PO Box/unique ZIPs and aggregate to ZCTAs before joining to geometry.
+- Reproducibility: All visualizations are pre-built htmlwidgets; this template does not re-query external services.
 
 ## Quality Flags (optional)
 
