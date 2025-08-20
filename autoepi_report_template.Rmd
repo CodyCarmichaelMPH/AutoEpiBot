@@ -145,7 +145,7 @@ This report compiles **counts**, **per-10k rates**, and an optional **ZIP/ZCTA c
 
 ---
 
-# Climate (Meta)
+# Climate 
 
 ```{r climate, results="asis"}
 clim_tab   <- params$meta$climate_table %||% NULL
@@ -162,7 +162,7 @@ if (has(clim_tab)) {
 }
 ```
 
-# Air Quality (Meta)
+# Air Quality
 
 ```{r aqi, results="asis"}
 aqi_plot    <- params$meta$aqi_plot %||% NULL

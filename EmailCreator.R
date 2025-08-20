@@ -1,426 +1,259 @@
-############################################################
-##  AutoEpi – Enhanced Email Summary Generator
-##  --------------------------------------------------------
-##  Prerequisites: • EmailStarterInfo.RData    (from TSCreate.R)
-##                 • LogsFileLoc.RData         (from LogsCreate.R)
-##                 • AutoEpi_Settings.RData    (from GUI.R)
-##
-##  Generates and sends automated email summaries using enhanced Outlook integration
-##  - Summary of examined syndromes and date ranges
-##  - List of generated reports (if any)
-##  - Link to logs for detailed review
-##  - Dynamic subject line based on alert count
-##  - Enhanced Outlook integration based on proven email script
-############################################################
+###############################################################################
+# AutoEpi – Outlook sender via Microsoft Graph (no COM, no tenant mgmt)
+#
+# Requires from your pipeline:
+#   • EmailStarterInfo.RData    -> email_df
+#   • LogsFileLoc.RData         -> LogsFileLoc
+#   • AutoEpi_Settings.RData    -> autoepi_settings
+#   • [optional] Reports_Dir/individual_reports_metadata.RData
+#       -> individual_reports_metadata (list with $file_path, etc.)
+#
+# Switches (priority: CLI > env > settings):
+#   • Send enabled:
+#       - CLI:  --off
+#       - ENV:  AUTOEPI_SEND=0/1
+#       - SET:  Email_Settings$SendEnabled (TRUE/FALSE, default TRUE)
+#   • Display-only (create draft; don't send or update logs):
+#       - CLI:  --display
+#       - ENV:  AUTOEPI_DISPLAY_ONLY=1
+#       - SET:  Email_Settings$DisplayOnly (TRUE/FALSE, default FALSE)
+###############################################################################
 
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readr)
-  library(glue)
-  library(knitr)
-  library(stringr)
-  library(stringdist)
-})
+## ────────────────────────────────────────────────────────────────────────────
+## 0) Small utilities
+## ────────────────────────────────────────────────────────────────────────────
 
-# Enhanced Outlook integration functions (based on proven script)
-load_or_install <- function(pkg) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    install.packages(pkg, repos = "https://cloud.r-project.org")
-  }
-  suppressPackageStartupMessages(
-    library(pkg, character.only = TRUE, quietly = TRUE)
-  )
-  TRUE
+`%||%` <- function(a,b) if (!is.null(a)) a else b
+
+stop_if_missing <- function(path, hint=NULL){
+  if (!file.exists(path)) stop(paste0("Missing file: ", path, if(!is.null(hint)) paste0("\n",hint)), call.=FALSE)
 }
 
-ensure_dependencies <- function() {
-  pkgs <- c("RDCOMClient")
-  vapply(pkgs, load_or_install, FUN.VALUE = logical(1))
-  invisible(NULL)
+validate_emails <- function(vec){
+  vec <- unique(trimws(vec))
+  rx  <- "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+  ok  <- grepl(rx, vec)
+  if (!all(ok)) stop("Invalid recipient(s): ", paste(vec[!ok], collapse=", "), call.=FALSE)
+  vec
 }
 
-get_outlook_app <- function() {
-  app <- tryCatch(RDCOMClient::COMCreate("Outlook.Application"),
-                  error = function(e) NULL)
-  if (is.null(app)) {
-    stop("Could not create Outlook COM object – is Outlook installed *and* running?")
-  }
-  app
+html_escape <- function(x){
+  x <- ifelse(is.na(x), "", as.character(x))
+  x <- gsub("&","&amp;",x,fixed=TRUE)
+  x <- gsub("<","&lt;", x,fixed=TRUE)
+  x <- gsub(">","&gt;", x,fixed=TRUE)
+  x
 }
 
-# Ensure dependencies are loaded
-ensure_dependencies()
-
-# ------------------------------------------------------------------
-# 1.  Load required data files
-# ------------------------------------------------------------------
-cat("AutoEpi Email Creator\n")
-cat("=====================\n")
-
-# Load email starter info (what syndromes were queried)
-if (!file.exists("EmailStarterInfo.RData")) {
-  stop("EmailStarterInfo.RData not found. Run TSCreate.R first.")
-}
-load("EmailStarterInfo.RData")  # -> email_df
-
-# Load logs location
-if (!file.exists("LogsFileLoc.RData")) {
-  stop("LogsFileLoc.RData not found. Run LogsCreate.R first.")
-}
-load("LogsFileLoc.RData")  # -> LogsFileLoc
-
-# Load settings (for email configuration if needed)
-if (!file.exists("AutoEpi_Settings.RData")) {
-  stop("AutoEpi_Settings.RData not found. Run GUI.R first.")
-}
-load("AutoEpi_Settings.RData")  # -> autoepi_settings
-
-# ------------------------------------------------------------------
-# 2.  Read current logs
-# ------------------------------------------------------------------
-if (!file.exists(LogsFileLoc)) {
-  stop("Log file not found at ", LogsFileLoc)
-}
-
-log_levels <- c("Normal", "Warning", "Alert", "False Positive")
-logs_df <- read_csv(LogsFileLoc,
-                    col_types = cols(
-                      ObvsDate       = col_date(),
-                      presented_name = col_character(),
-                      AlertLevel     = col_factor(levels = log_levels),
-                      ReportCreated  = col_factor(levels = c("no", "yes")),
-                      ReportLocation = col_character(),
-                      EmailSent      = col_factor(levels = c("no", "yes"))
-                    ))
-
-# ------------------------------------------------------------------
-# 3.  Prepare email content components
-# ------------------------------------------------------------------
-
-# A. Syndrome examination summary (from email_df)
-syndrome_summary <- email_df %>%
-  arrange(presented_name) %>%
-  select(
-    Syndrome = presented_name,
-    `Start Date` = StartDate,
-    `End Date` = EndDate
-  )
-
-# B. Reports generated summary
-reports_generated <- logs_df %>%
-  filter(ReportCreated == "yes") %>%
-  arrange(ObvsDate, presented_name) %>%
-  select(
-    Syndrome = presented_name,
-    Date = ObvsDate,
-    `Report Location` = ReportLocation
-  )
-
-# Load individual report metadata if available
-individual_reports_path <- file.path(autoepi_settings$IO$Reports_Dir, "individual_reports_metadata.RData")
-individual_reports_list <- list()
-if (file.exists(individual_reports_path)) {
-  load(individual_reports_path)  # individual_reports_metadata
-  individual_reports_list <- individual_reports_metadata
-}
-
-# C. Count alerts for subject line
-alert_count <- logs_df %>%
-  filter(AlertLevel %in% c("Warning", "Alert")) %>%
-  nrow()
-
-# D. Generate subject line
-today_date <- format(Sys.Date(), "%Y-%m-%d")
-subject_line <- if (nrow(reports_generated) == 0) {
-  glue("AutoEpi Results for {today_date} - No Alerts")
-} else {
-  glue("AutoEpi Results for {today_date} - {alert_count} Alert(s)")
-}
-
-# ------------------------------------------------------------------
-# 4.  Create HTML email body
-# ------------------------------------------------------------------
-
-# Helper function to convert data frame to HTML table
-df_to_html_table <- function(df, caption = NULL) {
-  if (nrow(df) == 0) {
-    return("<p><em>No data to display</em></p>")
-  }
-  
-  html <- "<table border='1' style='border-collapse: collapse; margin: 10px 0;'>\n"
-  
-  if (!is.null(caption)) {
-    html <- paste0(html, "<caption style='font-weight: bold; margin-bottom: 5px;'>", 
-                   caption, "</caption>\n")
-  }
-  
-  # Header row
-  html <- paste0(html, "<tr style='background-color: #f0f0f0;'>\n")
-  for (col_name in names(df)) {
-    html <- paste0(html, "<th style='padding: 8px; text-align: left;'>", 
-                   col_name, "</th>\n")
-  }
-  html <- paste0(html, "</tr>\n")
-  
-  # Data rows
-  for (i in seq_len(nrow(df))) {
-    html <- paste0(html, "<tr>\n")
-    for (j in seq_len(ncol(df))) {
-      cell_value <- df[i, j]
-      if (is.na(cell_value)) cell_value <- ""
-      html <- paste0(html, "<td style='padding: 8px;'>", cell_value, "</td>\n")
-    }
-    html <- paste0(html, "</tr>\n")
-  }
-  
-  html <- paste0(html, "</table>\n")
-  return(html)
-}
-
-# Build email body
-email_body <- glue("
-<html>
-<body style='font-family: Arial, sans-serif; line-height: 1.6;'>
-
-<h2>AutoEpi Daily Summary</h2>
-
-<p>Hello!</p>
-
-<p>Today we examined the following syndromes on the following dates:</p>
-
-{df_to_html_table(syndrome_summary)}
-
-")
-
-# Add reports section if any exist
-if (nrow(reports_generated) > 0) {
-  email_body <- paste0(email_body, glue("
-<p>The following reports were generated:</p>
-
-{df_to_html_table(reports_generated)}
-
-"))
-  
-  # Add individual report links if available
-  if (length(individual_reports_list) > 0) {
-    email_body <- paste0(email_body, "
-<h3>Individual Alert Reports</h3>
-<p>Detailed HTML reports have been generated for each syndrome:</p>
-<ul>
-")
-    
-    for (report in individual_reports_list) {
-      report_name <- basename(report$file_path)
-      email_body <- paste0(email_body, glue("
-<li><strong>{report$syndrome}</strong> ({report$date}) - {report$visit_count} visits
-    <br/>Attachment: <a href='file:///{normalizePath(report$file_path, winslash='/')}'>Open Report</a>
-</li>
-"))
-    }
-    
-    email_body <- paste0(email_body, "</ul>")
-  }
-  
-} else {
-  email_body <- paste0(email_body, "
-<p><strong>No reports were generated today.</strong> All examined syndromes were within normal parameters.</p>
-
-")
-}
-
-# Add footer
-email_body <- paste0(email_body, glue("
-<p>Please view detailed logs at: <code>{LogsFileLoc}</code></p>
-
-<hr style='margin: 20px 0;'>
-
-<p style='font-size: 0.9em; color: #666;'>
-This report was generated by AutoEpiBot. For assistance after November 1, 2025, 
-please contact Cody Carmichael, MPH, CPH at 
-<a href='mailto:codymicah.carmichael@gmail.com'>codymicah.carmichael@gmail.com</a>
-</p>
-
-</body>
-</html>
-"))
-
-# ------------------------------------------------------------------
-# 5.  Enhanced email creation and sending
-# ------------------------------------------------------------------
-
-cat("Creating email...\n")
-
-# Get recipient email addresses (prompt user if not configured)
-email_recipients <- autoepi_settings$Email_Settings$Recipients
-
-if (length(email_recipients) == 0) {
-  cat("No email recipients configured in settings.\n")
-  
-  # In interactive mode, prompt for recipients
-  if (interactive()) {
-    cat("Please enter the email address(es) where you want to send the report:\n")
-    email_input <- readline("Enter email addresses (comma-separated): ")
-    
-    if (nzchar(email_input)) {
-      email_recipients <- trimws(strsplit(email_input, ",")[[1]])
-      # Validate email format (basic check)
-      valid_emails <- grepl("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", email_recipients)
-      if (all(valid_emails)) {
-        cat("Using recipients:", paste(email_recipients, collapse = ", "), "\n")
-      } else {
-        invalid_emails <- email_recipients[!valid_emails]
-        cat("WARNING: Invalid email format detected:", paste(invalid_emails, collapse = ", "), "\n")
-        cat("Email will be displayed for manual review.\n")
-        email_recipients <- character(0)
-      }
-    } else {
-      cat("No recipients provided. Email will be displayed for manual sending.\n")
-      email_recipients <- character(0)
-    }
-  } else {
-    cat("Running in non-interactive mode. Email will be displayed for manual review.\n")
-  }
-}
-
-# Test Outlook availability first
-outlook_available <- FALSE
-if (.Platform$OS.type == "windows" && requireNamespace("RDCOMClient", quietly = TRUE)) {
-  outlook_available <- tryCatch({
-    test_app <- get_outlook_app()
-    TRUE
-  }, error = function(e) {
-    cat("WARNING: Outlook not available -", conditionMessage(e), "\n")
-    FALSE
+df_to_html_table <- function(df, caption=NULL){
+  if (is.null(df) || nrow(df)==0) return("<p><em>No data to display</em></p>")
+  heads <- paste(sprintf(
+    "<th style='padding:6px;text-align:left;border-bottom:1px solid #ddd'>%s</th>",
+    html_escape(names(df))
+  ), collapse="")
+  rows  <- apply(df,1,function(r){
+    cells <- paste(sprintf(
+      "<td style='padding:6px;border-bottom:1px solid #f2f2f2'>%s</td>",
+      html_escape(r)
+    ), collapse="")
+    paste0("<tr>", cells, "</tr>")
   })
-}
-
-if (outlook_available) {
-  # Create actual email in Outlook
-  tryCatch({
-    outlook_app <- get_outlook_app()
-    
-    # Create new mail item
-    mail_item <- outlook_app$CreateItem(0)  # 0 = olMailItem
-    
-    # Set email properties
-    mail_item[["Subject"]] <- subject_line
-    mail_item[["HTMLBody"]] <- email_body
-    
-    # Set recipients
-    if (length(email_recipients) > 0) {
-      # Set primary recipients
-      mail_item[["To"]] <- paste(email_recipients, collapse = "; ")
-      cat("Recipients configured:", paste(email_recipients, collapse = ", "), "\n")
-    } else {
-      cat("No recipients set - email will be displayed for manual review\n")
-    }
-    
-    # Attach individual HTML reports if they exist
-    if (length(individual_reports_list) > 0) {
-      cat("Attaching", length(individual_reports_list), "individual reports...\n")
-      for (report in individual_reports_list) {
-        if (file.exists(report$file_path)) {
-          # Use enhanced path handling
-          attachment_path <- normalizePath(report$file_path, winslash = "\\", mustWork = FALSE)
-          mail_item$Attachments$Add(attachment_path)
-          cat("  SUCCESS: Attached:", basename(report$file_path), "\n")
-        } else {
-          cat("  WARNING: Report file not found:", report$file_path, "\n")
-        }
-      }
-    }
-    
-    # Determine sending behavior
-    auto_send <- length(email_recipients) > 0  # Auto-send if recipients are configured
-    
-    if (auto_send) {
-      # Send automatically
-      mail_item$Send()
-      cat("SUCCESS: Email sent automatically to", length(email_recipients), "recipients\n")
-    } else {
-      # Display for manual review and sending
-      mail_item$Display()
-      cat("SUCCESS: Email created and displayed in Outlook for manual review/sending\n")
-    }
-    
-    cat("Subject:", subject_line, "\n")
-    cat("Syndromes examined:", nrow(syndrome_summary), "\n")
-    cat("Reports generated:", nrow(reports_generated), "\n")
-    if (length(individual_reports_list) > 0) {
-      cat("Individual reports attached:", length(individual_reports_list), "\n")
-    }
-    
-  }, error = function(e) {
-    cat("ERROR: Failed to create email in Outlook:", conditionMessage(e), "\n")
-    outlook_available <<- FALSE  # Force fallback
-  })
-}
-
-# Fallback only if Outlook is not available
-if (!outlook_available) {
-  cat("FALLBACK: Creating email as HTML file (Outlook not available)\n")
-  
-  # Create enhanced email file with instructions
-  email_file <- file.path(getwd(), glue("AutoEpi_Email_{today_date}.html"))
-  
-  # Add instructions to the email body
-  enhanced_email_body <- paste0(
-    '<div style="background: #fffacd; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd;">',
-    '<h3>📧 Email Instructions</h3>',
-    '<p><strong>This email was saved as an HTML file because Outlook is not available.</strong></p>',
-    if (length(email_recipients) > 0) {
-      paste0('<p><strong>Send to:</strong> ', paste(email_recipients, collapse = ", "), '</p>')
-    } else {
-      '<p><strong>Recipients:</strong> Configure recipients in AutoEpi settings or enter manually</p>'
-    },
-    '<p><strong>Subject:</strong> ', subject_line, '</p>',
-    '</div>',
-    email_body
+  cap <- if (!is.null(caption)) sprintf(
+    "<caption style='font-weight:bold;margin:4px 0 6px 0'>%s</caption>", html_escape(caption)
+  ) else ""
+  paste0(
+    "<table style='border-collapse:collapse;margin:10px 0;font-family:Arial,sans-serif;font-size:12pt'>",
+    cap, "<thead><tr>", heads, "</tr></thead>",
+    "<tbody>", paste(rows, collapse=""), "</tbody></table>"
   )
-  
-  writeLines(enhanced_email_body, email_file)
-  cat("Email content saved to:", email_file, "\n")
-  cat("NEXT STEP: Open this file in a browser, copy content, and paste into your email client\n")
-  
-  if (length(email_recipients) > 0) {
-    cat("Send to:", paste(email_recipients, collapse = ", "), "\n")
-  }
 }
 
-# ------------------------------------------------------------------
-# 6.  Update logs to mark emails as processed
-# ------------------------------------------------------------------
+## ────────────────────────────────────────────────────────────────────────────
+## 1) Switches (CLI > env > settings)
+## ────────────────────────────────────────────────────────────────────────────
 
-# Update EmailSent status for syndromes that were in today's run
-today_syndromes <- unique(email_df$presented_name)
+parse_switches <- function(autoepi_settings){
+  args <- commandArgs(trailingOnly=TRUE)
+  
+  send_enabled <- autoepi_settings$Email_Settings$SendEnabled %||% TRUE
+  display_only <- autoepi_settings$Email_Settings$DisplayOnly %||% FALSE
+  
+  env_send <- Sys.getenv("AUTOEPI_SEND","")
+  if (nzchar(env_send)) send_enabled <- as.integer(env_send)!=0
+  
+  env_disp <- Sys.getenv("AUTOEPI_DISPLAY_ONLY","")
+  if (nzchar(env_disp)) display_only <- as.integer(env_disp)!=0
+  
+  if (length(args)) {
+    if ("--off" %in% args)     send_enabled <- FALSE
+    if ("--display" %in% args) display_only <- TRUE
+  }
+  
+  list(send_enabled=send_enabled, display_only=display_only)
+}
 
-logs_df <- logs_df %>%
-  mutate(
-    EmailSent = case_when(
-      presented_name %in% today_syndromes ~ 
-        factor("yes", levels = c("no", "yes")),
-      TRUE ~ EmailSent
+## ────────────────────────────────────────────────────────────────────────────
+## 2) Microsoft Graph client (auto-detect signed-in account; no tenant arg)
+## ────────────────────────────────────────────────────────────────────────────
+
+get_outlook_client <- function(){
+  if (!requireNamespace("Microsoft365R", quietly=TRUE))
+    stop("Install Microsoft365R: install.packages('Microsoft365R')", call.=FALSE)
+  # Auto-detects your cached token / signed-in context.
+  Microsoft365R::get_business_outlook(
+    scopes = c("Mail.ReadWrite","Mail.Send","offline_access")
+  )
+}
+
+## ────────────────────────────────────────────────────────────────────────────
+## 3) Main
+## ────────────────────────────────────────────────────────────────────────────
+
+main <- function(){
+  message("AutoEpi Outlook (Graph) — starting")
+  
+  # Required artifacts
+  stop_if_missing("EmailStarterInfo.RData", "Run TSCreate.R first.")
+  stop_if_missing("LogsFileLoc.RData",      "Run LogsCreate.R first.")
+  stop_if_missing("AutoEpi_Settings.RData", "Run GUI.R first.")
+  
+  load("EmailStarterInfo.RData")   # -> email_df
+  load("LogsFileLoc.RData")        # -> LogsFileLoc
+  load("AutoEpi_Settings.RData")   # -> autoepi_settings
+  
+  suppressPackageStartupMessages({ library(readr); library(dplyr); library(glue) })
+  
+  sw <- parse_switches(autoepi_settings)
+  message("Switches: SendEnabled=", sw$send_enabled, " | DisplayOnly=", sw$display_only)
+  
+  # Read logs
+  logs_date_fmt <- autoepi_settings$IO$LogsDateFormat %||% "%Y-%m-%d"
+  stop_if_missing(LogsFileLoc, "Log file path came from LogsFileLoc.RData")
+  readr::local_edition(1)
+  logs_df <- readr::read_csv(
+    LogsFileLoc,
+    col_types = readr::cols(
+      ObvsDate       = readr::col_date(format = logs_date_fmt),
+      presented_name = readr::col_character(),
+      AlertLevel     = readr::col_factor(levels = c("Normal","Warning","Alert","False Positive")),
+      ReportCreated  = readr::col_factor(levels = c("no","yes")),
+      ReportLocation = readr::col_character(),
+      EmailSent      = readr::col_factor(levels = c("no","yes"))
     )
   )
+  probs <- try(readr::problems(logs_df), silent=TRUE)
+  if (!inherits(probs,"try-error") && nrow(probs)>0)
+    warning("Parsing issues in logs (first rows):\n", utils::capture.output(print(utils::head(probs,5))), call.=FALSE)
+  
+  # Optional individual report metadata
+  rpt_dir <- autoepi_settings$IO$Reports_Dir %||% getwd()
+  indiv_meta_path <- file.path(rpt_dir, "individual_reports_metadata.RData")
+  individual_reports <- list()
+  if (file.exists(indiv_meta_path)) {
+    load(indiv_meta_path)  # -> individual_reports_metadata
+    individual_reports <- individual_reports_metadata
+  }
+  
+  # Compose content
+  syndrome_summary <- email_df %>%
+    arrange(presented_name) %>%
+    select(Syndrome = presented_name, `Start Date`=StartDate, `End Date`=EndDate)
+  
+  reports_generated <- logs_df %>%
+    filter(ReportCreated=="yes") %>%
+    arrange(ObvsDate, presented_name) %>%
+    select(Syndrome=presented_name, Date=ObvsDate, `Report Location`=ReportLocation)
+  
+  alert_count <- logs_df %>% filter(AlertLevel %in% c("Warning","Alert")) %>% nrow()
+  
+  today   <- format(Sys.Date(), "%Y-%m-%d")
+  subject <- if (nrow(reports_generated)==0)
+    glue("AutoEpi Results for {today} - No Alerts")
+  else
+    glue("AutoEpi Results for {today} - {alert_count} Alert(s)")
+  
+  body <- paste0(
+    "<html><body style='font-family:Arial,sans-serif;line-height:1.5'>",
+    "<h2 style='margin:0 0 10px 0'>AutoEpi Daily Summary</h2>",
+    "<p>Today we examined the following syndromes over these dates:</p>",
+    df_to_html_table(syndrome_summary),
+    if (nrow(reports_generated)>0)
+      paste0("<p>The following reports were generated:</p>", df_to_html_table(reports_generated))
+    else
+      "<p><strong>No reports were generated today.</strong> All examined syndromes were within normal parameters.</p>",
+    sprintf("<p>View detailed logs at: <code>%s</code></p>", html_escape(LogsFileLoc)),
+    "<hr style='margin:20px 0;border:none;border-top:1px solid #ddd'/>",
+    "<p style='font-size:0.9em;color:#666'>This report was generated by AutoEpiBot.</p>",
+    "</body></html>"
+  )
+  
+  # Recipients
+  to  <- validate_emails(autoepi_settings$Email_Settings$Recipients %||% character(0))
+  if (!length(to)) stop("Email_Settings$Recipients is empty.", call.=FALSE)
+  cc  <- autoepi_settings$Email_Settings$CC  %||% character(0);  if (length(cc))  cc  <- validate_emails(cc)
+  bcc <- autoepi_settings$Email_Settings$BCC %||% character(0);  if (length(bcc)) bcc <- validate_emails(bcc)
+  
+  # Attachment paths that exist
+  attachments <- character(0)
+  if (length(individual_reports)) {
+    attachments <- vapply(individual_reports, function(r) r$file_path %||% "", character(1))
+    attachments <- attachments[nzchar(attachments) & file.exists(attachments)]
+  }
+  
+  # Acquire Outlook (Graph) client — auto-detects your signed-in account
+  outl <- get_outlook_client()
+  
+  if (!sw$send_enabled) {
+    message("[DRY-RUN] Subject: ", subject)
+    message("[DRY-RUN] To: ", paste(to, collapse=", "))
+    if (length(attachments)) message("[DRY-RUN] Attachments: ", paste(basename(attachments), collapse=", "))
+    message("Logs NOT updated (dry-run).")
+    return(invisible(TRUE))
+  }
+  
+  if (sw$display_only) {
+    # Create a draft for manual review
+    msg <- outl$create_email(
+      body         = body,
+      content_type = "html",
+      subject      = subject,
+      to           = to,
+      cc           = if (length(cc))  cc  else NULL,
+      bcc          = if (length(bcc)) bcc else NULL,
+      send_now     = FALSE
+    )
+    if (length(attachments)) for (p in unique(attachments)) msg$add_attachment(p)
+    message("Draft created in Outlook (Graph). Review/send manually.")
+    message("Logs NOT updated (display-only).")
+    return(invisible(TRUE))
+  }
+  
+  # Send immediately (no draft kept): create -> attach -> send
+  msg <- outl$create_email(
+    body         = body,
+    content_type = "html",
+    subject      = subject,
+    to           = to,
+    cc           = if (length(cc))  cc  else NULL,
+    bcc          = if (length(bcc)) bcc else NULL,
+    send_now     = FALSE
+  )
+  if (length(attachments)) for (p in unique(attachments)) msg$add_attachment(p)
+  msg$send()
+  message("Email sent via Microsoft Graph.")
+  
+  # Update logs only on actual send
+  today_syndromes <- unique(email_df$presented_name)
+  logs_df <- logs_df %>%
+    mutate(EmailSent = dplyr::if_else(
+      presented_name %in% today_syndromes,
+      factor("yes", levels=c("no","yes")),
+      EmailSent
+    ))
+  readr::write_csv(logs_df, LogsFileLoc)
+  message("Logs updated (EmailSent = yes) for ", length(today_syndromes), " syndromes")
+  
+  invisible(TRUE)
+}
 
-# Save updated logs
-write_csv(logs_df, LogsFileLoc)
-
-updated_email_count <- logs_df %>%
-  filter(presented_name %in% today_syndromes) %>%
-  nrow()
-
-cat("Updated", updated_email_count, "log entries to mark emails as sent\n")
-
-cat("\nAutoEpi Email Creator Complete\n")
-cat("==============================\n")
-
-# ------------------------------------------------------------------
-# 7.  Summary output
-# ------------------------------------------------------------------
-cat("Email Summary:\n")
-cat("   Subject:", subject_line, "\n")
-cat("   Syndromes examined:", nrow(syndrome_summary), "\n") 
-cat("   Reports generated:", nrow(reports_generated), "\n")
-cat("   Alert level records:", alert_count, "\n")
-cat("   Log file:", LogsFileLoc, "\n")
+if (interactive()) main() else main()

@@ -6,6 +6,9 @@ suppressPackageStartupMessages({
   library(purrr)
   library(stringr)
   library(fs)
+  # minimal add-ons for logs update:
+  library(readr)
+  library(dplyr)
 })
 
 # -----------------------
@@ -113,6 +116,12 @@ sanitize_filename <- function(x) {
   x
 }
 
+# minimal date parser used only at join time
+to_Date <- function(x) {
+  suppressWarnings(as.Date(as.character(x),
+                           tryFormats = c("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y")))
+}
+
 date_keys <- names(autoepi_report)
 
 # -----------------------
@@ -120,6 +129,9 @@ date_keys <- names(autoepi_report)
 # -----------------------
 rendered <- 0L
 failed   <- 0L
+
+# collect created files for logs update (minimal change)
+created <- list()  # list of list(date=dk, syndrome=sk, path=full_html_path)
 
 for (dk in date_keys) {
   node <- autoepi_report[[dk]]
@@ -141,6 +153,7 @@ for (dk in date_keys) {
     
     # Build output filename
     fname <- glue("{sanitize_filename(dk)}__{sanitize_filename(sk)}__AutoEpi.html")
+    full_out <- path(out_dir, fname)
     
     message(glue("Rendering: Date='{dk}'  Syndrome='{sk}'"))
     
@@ -167,7 +180,8 @@ for (dk in date_keys) {
     
     if (ok) {
       rendered <- rendered + 1L
-      message("  ✓ Wrote: ", path(out_dir, fname))
+      message("  ✓ Wrote: ", full_out)
+      created[[length(created) + 1L]] <- list(date = dk, syndrome = sk, path = full_out)
     } else {
       failed <- failed + 1L
     }
@@ -178,3 +192,80 @@ message("\n=== Done ===")
 message("Rendered: ", rendered)
 message("Failed:   ", failed)
 message("Output:   ", out_root)
+
+# -----------------------
+# AFTER: bolt-on logs update (minimal)
+# -----------------------
+if (file.exists("LogsFileLoc.RData")) {
+  load("LogsFileLoc.RData")  # -> LogsFileLoc
+}
+
+if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) && file.exists(LogsFileLoc)) {
+  logs_path <- normalizePath(LogsFileLoc, winslash = "/", mustWork = FALSE)
+  
+  if (!length(created)) {
+    message("\n=== Logs Update ===")
+    message("No HTML files created; nothing to update in logs.")
+    quit(status = 0)
+  }
+  
+  # minimal deps already loaded above: readr, dplyr
+  logs_raw <- suppressMessages(readr::read_csv(logs_path, show_col_types = FALSE))
+  needed <- c("ObvsDate","presented_name","AlertLevel","ReportCreated","ReportLocation","EmailSent")
+  if (!all(needed %in% names(logs_raw))) {
+    warning("Logs CSV missing required columns; skipping update: ", logs_path)
+    quit(status = 0)
+  }
+  
+  to_Date <- function(x) suppressWarnings(as.Date(as.character(x),
+                                                  tryFormats = c("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y")))
+  
+  logs_df <- logs_raw %>%
+    mutate(
+      .idx = dplyr::row_number(),
+      ObvsDate_parsed = to_Date(ObvsDate),
+      presented_name  = as.character(presented_name)
+    )
+  
+  # Use the date encoded in the RData filename if present; otherwise skip date filter
+  target_date <- suppressWarnings(as.Date(rd_date, "%Y-%m-%d"))
+  
+  created_df <- dplyr::bind_rows(lapply(created, as.data.frame)) %>%
+    dplyr::transmute(
+      presented_name = as.character(syndrome),
+      html_path      = path
+    )
+  
+  logs_scope <- if (!is.na(target_date)) {
+    dplyr::filter(logs_df, ObvsDate_parsed == target_date)
+  } else {
+    logs_df
+  }
+  
+  map_df <- logs_scope %>%
+    dplyr::select(.idx, presented_name, AlertLevel) %>%
+    dplyr::inner_join(created_df, by = "presented_name")
+  
+  if (nrow(map_df) > 0) {
+    logs_df$ReportCreated[map_df$.idx]  <- "yes"
+    logs_df$ReportLocation[map_df$.idx] <- map_df$html_path
+    
+    aw_count <- sum(as.character(map_df$AlertLevel) %in% c("Warning","Alert"), na.rm = TRUE)
+    
+    logs_out <- logs_df %>% dplyr::select(-.idx, -ObvsDate_parsed)
+    readr::write_csv(logs_out, logs_path)
+    
+    message("\n=== Logs Update ===")
+    message("Updated rows:               ", nrow(map_df))
+    message("Alerts/Warnings in updates: ", aw_count)
+    message("CSV written:                ", logs_path)
+  } else {
+    message("\n=== Logs Update ===")
+    message("No matching rows found to update in logs (date = ",
+            ifelse(is.na(target_date), "ANY", as.character(target_date)), ").")
+  }
+  
+} else {
+  message("\n=== Logs Update ===")
+  message("LogsFileLoc.RData not found OR LogsFileLoc missing/invalid; skipping log updates.")
+}
