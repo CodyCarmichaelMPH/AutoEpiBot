@@ -160,17 +160,20 @@ main <- function(){
     select(Syndrome = presented_name, `Start Date`=StartDate, `End Date`=EndDate)
   
   reports_generated <- logs_df %>%
-    filter(ReportCreated=="yes") %>%
+    filter(ReportCreated=="yes", 
+           !is.na(ReportLocation), 
+           nzchar(ReportLocation),
+           grepl("\\.html$", ReportLocation)) %>%
     arrange(ObvsDate, presented_name) %>%
     select(Syndrome=presented_name, Date=ObvsDate, `Report Location`=ReportLocation)
   
-  alert_count <- logs_df %>% filter(AlertLevel %in% c("Warning","Alert")) %>% nrow()
+  report_count <- nrow(reports_generated)
   
   today   <- format(Sys.Date(), "%Y-%m-%d")
-  subject <- if (nrow(reports_generated)==0)
-    glue("AutoEpi Results for {today} - No Alerts")
+  subject <- if (report_count==0)
+    glue("AutoEpi Results for {today} - No Reports Generated")
   else
-    glue("AutoEpi Results for {today} - {alert_count} Alert(s)")
+    glue("AutoEpi Results for {today} - {report_count} Report(s) Generated")
   
   body <- paste0(
     "<html><body style='font-family:Arial,sans-serif;line-height:1.5'>",
