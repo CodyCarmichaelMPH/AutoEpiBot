@@ -123,6 +123,13 @@ for (i in seq_len(nrow(syndromes))) {
   if (is.null(ts_data) || nrow(ts_data) == 0) next
   
   ## 4c.  Normalise and stash
+  # Debug: check if colorID exists and what values it has
+  if (!"colorID" %in% names(ts_data)) {
+    warning("colorID column not found in API response for ", s_name)
+    # If colorID doesn't exist, create a default based on count vs expected
+    ts_data$colorID <- ifelse(ts_data$count > ts_data$expected * 1.5, 2, 1)
+  }
+  
   ts_df <- ts_data |>
     transmute(
       ObvsDate       = as.Date(date),

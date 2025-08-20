@@ -1,0 +1,121 @@
+[1mdiff --git a/TSCreate.R b/TSCreate.R[m
+[1mindex 55c411d..4c89901 100644[m
+[1m--- a/TSCreate.R[m
+[1m+++ b/TSCreate.R[m
+[36m@@ -128,8 +128,9 @@[m [mfor (i in seq_len(nrow(syndromes))) {[m
+       ObvsDate       = as.Date(date),[m
+       presented_name = s_name,[m
+       AlertLevel     = factor(case_when([m
+[31m-        colorID == 3 ~ "Alert",[m
+[32m+[m[32m        colorID >= 3 ~ "Alert",[m
+         colorID == 2 ~ "Warning",[m
+[32m+[m[32m        colorID <= 1 ~ "Normal",[m
+         TRUE         ~ "Normal"[m
+       ), levels = log_levels),[m
+       count,[m
+[1mdiff --git a/autoepi_report_template.Rmd b/autoepi_report_template.Rmd[m
+[1mindex 63fe15f..50496f8 100644[m
+[1m--- a/autoepi_report_template.Rmd[m
+[1m+++ b/autoepi_report_template.Rmd[m
+[36m@@ -1,5 +1,5 @@[m
+ ---[m
+[31m-title: "AutoEpi: Daily Syndrome Report"[m
+[32m+[m[32mtitle: "AutoEpi Daily Syndrome Report"[m
+ subtitle: "Automated RMarkdown Template"[m
+ output:[m
+   html_document:[m
+[36m@@ -136,12 +136,12 @@[m [mh1, h2, h3 { margin-top: 1.4em; }[m
+ # Report Overview[m
+ [m
+ - **Date (inferred):** `r .date_label`[m
+[31m-- **Date (key):** `r params$date_key %||% "—"`  [m
+[32m+[m[32m- **Date (key):** `r params$date_key %||% "N/A"`[m[41m  [m
+ - **Syndrome (inferred):** `r .syndrome_label`[m
+[31m-- **Syndrome (key):** `r params$syndrome_key %||% "—"`  [m
+[32m+[m[32m- **Syndrome (key):** `r params$syndrome_key %||% "N/A"`[m[41m  [m
+ - **Generated:** `r format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")`[m
+ [m
+[31m-This report compiles **counts**, **per-10k rates**, and an optional **ZIP/ZCTA choropleth** for the selected syndrome and date. It also includes **per-date meta** for climate and air quality (PM2.5 24-hr).[m
+[32m+[m[32mThis report compiles counts, per-10k rates, and an optional ZIP/ZCTA choropleth for the selected syndrome and date. It also includes per-date meta for climate and air quality (PM2.5 24-hr).[m
+ [m
+ ---[m
+ [m
+[36m@@ -152,12 +152,12 @@[m [mclim_tab   <- params$meta$climate_table %||% NULL[m
+ clim_stats <- params$meta$climate_stats %||% NULL[m
+ [m
+ if (has(clim_stats)) {[m
+[31m-  cat("## Climate – Summary\n")[m
+[32m+[m[32m  cat("## Climate Summary\n")[m
+   print(safekable(clim_stats, caption = "Climate Averages (across included stations)"))[m
+ }[m
+ [m
+ if (has(clim_tab)) {[m
+[31m-  cat("## Climate – Stations\n")[m
+[32m+[m[32m  cat("## Climate Stations\n")[m
+   print(safekable(clim_tab, caption = "Station Readings"))[m
+ }[m
+ ```[m
+[36m@@ -170,22 +170,22 @@[m [maqi_summary <- params$meta$aqi_summary %||% NULL[m
+ aqi_stn     <- params$meta$aqi_stations %||% NULL[m
+ [m
+ if (has(aqi_plot)) {[m
+[31m-  cat("## AQI – PM2.5 (24-hr)\n")[m
+[32m+[m[32m  cat("## AQI PM2.5 (24-hr)\n")[m
+   aqi_plot[m
+ } else if (has(aqi_summary)) {[m
+[31m-  cat("## AQI – PM2.5 (24-hr) Summary\n")[m
+[32m+[m[32m  cat("## AQI PM2.5 (24-hr) Summary\n")[m
+   print(safekable(aqi_summary, caption = "County-Level Summary"))[m
+ }[m
+ [m
+ if (has(aqi_stn)) {[m
+[31m-  cat("### AQI – Stations\n")[m
+[32m+[m[32m  cat("### AQI Stations\n")[m
+   print(safekable(aqi_stn, caption = "Station Measurements"))[m
+ }[m
+ ```[m
+ [m
+ # Counts[m
+ [m
+[31m-The following sections display **counts** by demographic or facility dimension. If an element is missing in the input object, it will be omitted automatically.[m
+[32m+[m[32mThe following sections display counts by demographic or facility dimension. If an element is missing in the input object, it will be omitted automatically.[m
+ [m
+ ```{r counts, results="asis"}[m
+ cnt <- params$report$count %||% list()[m
+[36m@@ -214,7 +214,7 @@[m [mif (has(cnt$ethnicity)) {[m
+ [m
+ # Per-10k Rates[m
+ [m
+[31m-Rates are computed upstream using the **all-visits denominators** for the report date. Sections render only if corresponding widgets exist.[m
+[32m+[m[32mRates are computed upstream using the all-visits denominators for the report date. Sections render only if corresponding widgets exist.[m
+ [m
+ ```{r per10k, results="asis"}[m
+ r10 <- params$report$per10k %||% list()[m
+[36m@@ -235,7 +235,7 @@[m [mif (has(r10$hospital)) {[m
+ [m
+ # Map[m
+ [m
+[31m-If available, the map displays **counts by ZIP/ZCTA** for the report date and syndrome. Polygons with zero counts are rendered with low opacity to retain geographic context.[m
+[32m+[m[32mIf available, the map displays counts by ZIP/ZCTA for the report date and syndrome. Polygons with zero counts are rendered with low opacity to retain geographic context.[m
+ [m
+ ```{r maps, results="asis"}[m
+ mp <- params$report$maps %||% list()[m
+[36m@@ -247,12 +247,12 @@[m [mif (has(mp$choropleth)) {[m
+ [m
+ # Notes & Methods[m
+ [m
+[31m-- **Data source:** NSSP ESSENCE (as configured in the generating pipeline).[m
+[31m-- **Date scope:** Single date per report; meta (climate/AQI) is per-date and reused for all syndromes on that date.[m
+[31m-- **Demographics:** Age groups are derived from settings. Unknown/empty categories may be omitted upstream.[m
+[31m-- **Per-10k rates:** Numerators from the selected syndrome subset; denominators from all visits on the same date.[m
+[31m-- **Mapping:** ZIP→ZCTA crosswalk (if configured) is applied upstream to drop PO Box/unique ZIPs and aggregate to ZCTAs before joining to geometry.[m
+[31m-- **Reproducibility:** All visualizations are pre-built htmlwidgets; this template does not re-query external services.[m
+[32m+[m[32m- Data source: NSSP ESSENCE (as configured in the generating pipeline).[m
+[32m+[m[32m- Date scope: Single date per report; meta (climate/AQI) is per-date and reused for all syndromes on that date.[m
+[32m+[m[32m- Demographics: Age groups are derived from settings. Unknown/empty categories may be omitted upstream.[m
+[32m+[m[32m- Per-10k rates: Numerators from the selected syndrome subset; denominators from all visits on the same date.[m
+[32m+[m[32m- Mapping: ZIP to ZCTA crosswalk (if configured) is applied upstream to drop PO Box/unique ZIPs and aggregate to ZCTAs before joining to geometry.[m
+[32m+[m[32m- Reproducibility: All visualizations are pre-built htmlwidgets; this template does not re-query external services.[m
+ [m
+ ## Quality Flags (optional)[m
+ [m

@@ -49,21 +49,21 @@ pluck_plot_title <- function(w) {
   }, error = function(e) NULL)
 }
 
-# Parse a date-like thing to "YYYY-MM-DD" or "MM-DD-YYYY" depending on input
+# Parse a date-like thing to "MM/DD/YYYY" format
 fmt_date_label <- function(d) {
-  if (inherits(d, "Date")) return(format(d, "%Y-%m-%d"))
+  if (inherits(d, "Date")) return(format(d, "%m/%d/%Y"))
   if (is.numeric(d) && !is.na(d)) {
     s <- as.character(d)
-    if (nchar(s) == 8) return(format(as.Date(s, "%Y%m%d"), "%Y-%m-%d"))
+    if (nchar(s) == 8) return(format(as.Date(s, "%Y%m%d"), "%m/%d/%Y"))
   }
   if (is.character(d) && nzchar(d)) {
     s <- d[1]
-    # Accept common forms
-    if (grepl("^\\d{4}-\\d{2}-\\d{2}$", s)) return(s)
-    if (grepl("^\\d{8}$", s)) return(format(as.Date(s, "%Y%m%d"), "%Y-%m-%d"))
+    # Accept common forms and convert to MM/DD/YYYY
+    if (grepl("^\\d{4}-\\d{2}-\\d{2}$", s)) return(format(as.Date(s, "%Y-%m-%d"), "%m/%d/%Y"))
+    if (grepl("^\\d{8}$", s)) return(format(as.Date(s, "%Y%m%d"), "%m/%d/%Y"))
     if (grepl("^\\d{2}/\\d{2}/\\d{4}$", s)) {
-      # mm/dd/yyyy -> yyyy-mm-dd
-      return(format(as.Date(s, "%m/%d/%Y"), "%Y-%m-%d"))
+      # mm/dd/yyyy -> keep as is
+      return(s)
     }
   }
   NA_character_
@@ -118,6 +118,36 @@ infer_syndrome <- function(report, syn_key) {
   "Unknown Syndrome"
 }
 
+# Station name mapping function
+map_station_name <- function(station_raw) {
+  station_map <- c(
+    "sew-OLM" = "Olympia",
+    "sew-SEA" = "Seattle",
+    "sew-TAC" = "Tacoma",
+    "sew-SPO" = "Spokane",
+    "sew-YAK" = "Yakima",
+    "sew-VAN" = "Vancouver",
+    "sew-BEL" = "Bellevue",
+    "sew-EVE" = "Everett",
+    "sew-KEN" = "Kennewick",
+    "sew-PAS" = "Pasco",
+    "sew-RIC" = "Richland",
+    "sew-TRI" = "Tri-Cities"
+  )
+  ifelse(station_raw %in% names(station_map), station_map[station_raw], station_raw)
+}
+
+# Age group ordering function
+order_age_groups <- function(age_groups) {
+  # Define the correct order for age groups
+  age_order <- c("0-5", "6-18", "19-24", "25-34", "35-44", "45-54", "55-64", "65+", "Unknown")
+  # Filter to only include age groups that exist in the data
+  existing_ages <- intersect(age_order, age_groups)
+  # Add any remaining age groups that weren't in our predefined order
+  remaining_ages <- setdiff(age_groups, age_order)
+  c(existing_ages, remaining_ages)
+}
+
 # Materialize our inferred labels
 .date_label <- infer_date_label(params$meta %||% list(), params$date_key %||% NA_character_)
 .syndrome_label <- infer_syndrome(params$report %||% list(), params$syndrome_key %||% NULL)
@@ -125,12 +155,12 @@ infer_syndrome <- function(report, syn_key) {
 
 <style>
 /* Minimal, readable table and section spacing tweaks */
-table { font-size: 0.95rem; }
+table { font-size: 1.1rem; width: 100%; }
 h1, h2, h3 { margin-top: 1.4em; }
 .figure, .html-widget { margin-top: 0.6em; margin-bottom: 1.1em; }
 .smallcaps { font-variant: small-caps; color: #555; }
 .badge { display: inline-block; padding: 0.2em 0.5em; background: #efefef; border-radius: 4px; margin-right: 0.3em; }
-.kable-table { width: auto !important; }
+.kable-table { width: 100% !important; }
 </style>
 
 # Report Overview
@@ -158,7 +188,14 @@ if (has(clim_stats)) {
 
 if (has(clim_tab)) {
   cat("## Climate Stations\n")
-  print(safekable(clim_tab, caption = "Station Readings"))
+  # Apply station name mapping if StationRaw column exists
+  if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
+    clim_tab$StationName <- map_station_name(clim_tab$StationRaw)
+    clim_tab_display <- clim_tab %>% select(-StationRaw) %>% rename(Station = StationName)
+  } else {
+    clim_tab_display <- clim_tab
+  }
+  print(safekable(clim_tab_display, caption = "Station Readings"))
 }
 ```
 
@@ -179,7 +216,14 @@ if (has(aqi_plot)) {
 
 if (has(aqi_stn)) {
   cat("### AQI Stations\n")
-  print(safekable(aqi_stn, caption = "Station Measurements"))
+  # Apply station name mapping if StationID column exists
+  if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
+    aqi_stn$StationName <- map_station_name(aqi_stn$StationID)
+    aqi_stn_display <- aqi_stn %>% select(-StationID) %>% rename(Station = StationName)
+  } else {
+    aqi_stn_display <- aqi_stn
+  }
+  print(safekable(aqi_stn_display, caption = "Station Measurements"))
 }
 ```
 
