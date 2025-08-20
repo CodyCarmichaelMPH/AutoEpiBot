@@ -190,8 +190,8 @@ if (has(clim_tab)) {
   cat("## Climate Stations\n")
   # Apply station name mapping if StationRaw column exists
   if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
-    clim_tab$StationName <- map_station_name(clim_tab$StationRaw)
-    clim_tab_display <- clim_tab %>% select(-StationRaw) %>% rename(Station = StationName)
+    clim_tab$ClimateStation <- map_station_name(clim_tab$StationRaw)
+    clim_tab_display <- clim_tab %>% select(-StationRaw) %>% rename(Station = ClimateStation)
   } else {
     clim_tab_display <- clim_tab
   }
@@ -218,8 +218,8 @@ if (has(aqi_stn)) {
   cat("### AQI Stations\n")
   # Apply station name mapping if StationID column exists
   if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
-    aqi_stn$StationName <- map_station_name(aqi_stn$StationID)
-    aqi_stn_display <- aqi_stn %>% select(-StationID) %>% rename(Station = StationName)
+    aqi_stn$AQIStation <- map_station_name(aqi_stn$StationID)
+    aqi_stn_display <- aqi_stn %>% select(-StationID) %>% rename(Station = AQIStation)
   } else {
     aqi_stn_display <- aqi_stn
   }
