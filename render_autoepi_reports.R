@@ -250,6 +250,15 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
     logs_df$ReportCreated[map_df$.idx]  <- "yes"
     logs_df$ReportLocation[map_df$.idx] <- map_df$html_path
     
+    # Update False Positives: any entries that had Warning/Alert but no report generated
+    logs_df <- logs_df %>%
+      mutate(
+        AlertLevel = case_when(
+          AlertLevel %in% c("Warning", "Alert") & ReportCreated == "no" ~ "False Positive",
+          TRUE ~ AlertLevel
+        )
+      )
+    
     aw_count <- sum(as.character(map_df$AlertLevel) %in% c("Warning","Alert"), na.rm = TRUE)
     
     logs_out <- logs_df %>% dplyr::select(-.idx, -ObvsDate_parsed)
