@@ -130,15 +130,19 @@ for (i in seq_len(nrow(syndromes))) {
     ts_data$colorID <- ifelse(ts_data$count > ts_data$expected * 1.5, 2, 1)
   }
   
+  # Debug: print colorID values to understand what we're working with
+  message("Debug - ", s_name, ": colorID values = ", paste(ts_data$colorID, collapse=", "))
+  message("Debug - ", s_name, ": colorID class = ", class(ts_data$colorID))
+  
   ts_df <- ts_data |>
     transmute(
       ObvsDate       = as.Date(date),
       presented_name = s_name,
       AlertLevel     = factor(case_when(
-        colorID >= 3 ~ "Alert",
-        colorID == 2 ~ "Warning",
-        colorID <= 1 ~ "Normal",
-        TRUE         ~ "Normal"
+        as.numeric(colorID) >= 3 ~ "Alert",
+        as.numeric(colorID) == 2 ~ "Warning",
+        as.numeric(colorID) <= 1 ~ "Normal",
+        TRUE                     ~ "Normal"
       ), levels = log_levels),
       count,
       expected,
