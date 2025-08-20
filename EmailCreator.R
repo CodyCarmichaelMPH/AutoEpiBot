@@ -159,6 +159,25 @@ main <- function(){
     arrange(presented_name) %>%
     select(Syndrome = presented_name, `Start Date`=StartDate, `End Date`=EndDate)
   
+  # Get all HTML reports from the rendered directory for today's date folder
+  reports_dir <- autoepi_settings$IO$Reports_Dir
+  today_folder <- format(Sys.Date(), "%Y-%m-%d")
+  rendered_path <- file.path(reports_dir, "Rendered", today_folder)
+  
+  all_html_files <- character(0)
+  if (dir.exists(rendered_path)) {
+    # Get all subdirectories (date folders like 20201, 20305, etc.)
+    subdirs <- list.dirs(rendered_path, full.names = TRUE, recursive = FALSE)
+    for (subdir in subdirs) {
+      if (dir.exists(subdir)) {
+        # Get all HTML files in this subdirectory
+        html_files <- list.files(subdir, pattern = "\\.html$", full.names = TRUE)
+        all_html_files <- c(all_html_files, html_files)
+      }
+    }
+  }
+  
+  # Create a comprehensive reports table
   reports_generated <- logs_df %>%
     filter(ReportCreated=="yes", 
            !is.na(ReportLocation), 
@@ -166,6 +185,34 @@ main <- function(){
            grepl("\\.html$", ReportLocation)) %>%
     arrange(ObvsDate, presented_name) %>%
     select(Syndrome=presented_name, Date=ObvsDate, `Report Location`=ReportLocation)
+  
+  # Add any additional HTML files found in the rendered directory
+  if (length(all_html_files) > 0) {
+    # Extract syndrome and date from filename (format: YYYY-MM-DD__Syndrome__AutoEpi.html)
+    additional_reports <- data.frame(
+      `Report Location` = all_html_files,
+      stringsAsFactors = FALSE
+    )
+    
+    # Parse filename to extract date and syndrome
+    additional_reports$filename <- basename(all_html_files)
+    additional_reports$Date <- as.Date(sub("^([0-9]{4}-[0-9]{2}-[0-9]{2})__.*", "\\1", additional_reports$filename))
+    additional_reports$Syndrome <- sub("^[0-9]{4}-[0-9]{2}-[0-9]{2}__(.*)__AutoEpi\\.html$", "\\1", additional_reports$filename)
+    
+    # Only include files that aren't already in the logs
+    existing_paths <- reports_generated$`Report Location`
+    additional_reports <- additional_reports[!additional_reports$`Report Location` %in% existing_paths, ]
+    
+    if (nrow(additional_reports) > 0) {
+      additional_reports <- additional_reports %>%
+        select(Syndrome, Date, `Report Location`) %>%
+        arrange(Date, Syndrome)
+      
+      # Combine with existing reports
+      reports_generated <- bind_rows(reports_generated, additional_reports) %>%
+        arrange(Date, Syndrome)
+    }
+  }
   
   report_count <- nrow(reports_generated)
   
