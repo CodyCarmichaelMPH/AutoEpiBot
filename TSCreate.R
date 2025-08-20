@@ -149,6 +149,10 @@ for (i in seq_len(nrow(syndromes))) {
       Syndrome_Snippet = s_ccdd
     )
   
+  # Debug: print AlertLevel values to see if they're being assigned correctly
+  message("Debug - ", s_name, ": AlertLevel values = ", paste(ts_df$AlertLevel, collapse=", "))
+  message("Debug - ", s_name, ": AlertLevel class = ", class(ts_df$AlertLevel))
+  
   ts_list[[length(ts_list) + 1]] <- ts_df
   email_log[[length(email_log) + 1]] <-
     tibble(presented_name = s_name,
@@ -171,6 +175,12 @@ new_entries <- ts_all |>
          ReportLocation = "",
          EmailSent      = factor("no", levels = c("no", "yes"))) |>
   select(names(logs_df))
+
+# Debug: check new entries before writing
+if (nrow(new_entries) > 0) {
+  message("Debug - New entries AlertLevel values: ", paste(new_entries$AlertLevel, collapse=", "))
+  message("Debug - New entries count: ", nrow(new_entries))
+}
 
 logs_df <- bind_rows(logs_df, new_entries) |>
   arrange(ObvsDate, presented_name)
