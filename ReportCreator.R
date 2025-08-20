@@ -588,11 +588,6 @@ if (file.exists("LogsFileLoc.RData")) {
           paste(ObvsDate, presented_name) %in% paste(report_combinations$ObvsDate, report_combinations$presented_name),
           factor("yes", levels = c("no","yes")),
           ReportCreated
-        ),
-        ReportLocation = if_else(
-          paste(ObvsDate, presented_name) %in% paste(report_combinations$ObvsDate, report_combinations$presented_name),
-          out_file,
-          ReportLocation
         )
       )
     write_csv(logs_df, LogsFileLoc)
