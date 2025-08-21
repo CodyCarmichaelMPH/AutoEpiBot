@@ -215,6 +215,14 @@ if (has(clim_tab)) {
   # Debug: print what station IDs we're working with
   if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
     message("Debug - Climate station IDs: ", paste(unique(clim_tab$StationRaw), collapse=", "))
+    message("Debug - Climate station IDs (lowercase): ", paste(tolower(unique(clim_tab$StationRaw)), collapse=", "))
+    
+    # Test the mapping function on each station ID
+    for (station_id in unique(clim_tab$StationRaw)) {
+      mapped_name <- map_station_name(station_id)
+      message("Debug - Mapping '", station_id, "' -> '", mapped_name, "'")
+    }
+    
     clim_tab$Station <- map_station_name(clim_tab$StationRaw)
     clim_tab_display <- clim_tab %>% 
       rename(`Station Name` = Station, `Station ID` = StationRaw) %>%
