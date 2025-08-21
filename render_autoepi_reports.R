@@ -235,23 +235,15 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
       presented_name  = as.character(presented_name)
     )
   
-  # Use the date encoded in the RData filename if present; otherwise skip date filter
-  target_date <- suppressWarnings(as.Date(rd_date, "%Y-%m-%d"))
-  
   created_df <- dplyr::bind_rows(lapply(created, as.data.frame)) %>%
     dplyr::transmute(
       presented_name = as.character(syndrome),
       html_path      = path
     )
   
-  logs_scope <- if (!is.na(target_date)) {
-    dplyr::filter(logs_df, ObvsDate_parsed == target_date)
-  } else {
-    logs_df
-  }
-  
-  map_df <- logs_scope %>%
-    dplyr::select(.idx, presented_name, AlertLevel) %>%
+  # Match by syndrome name only (not by date, since we want to update the correct observation dates)
+  map_df <- logs_df %>%
+    dplyr::select(.idx, presented_name, AlertLevel, ObvsDate_parsed) %>%
     dplyr::inner_join(created_df, by = "presented_name")
   
   if (nrow(map_df) > 0) {
