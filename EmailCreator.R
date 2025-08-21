@@ -304,6 +304,9 @@ main <- function(){
       factor("yes", levels=c("no","yes")),
       EmailSent
     ))
+  # Ensure AlertLevel remains a factor with correct levels before writing
+  logs_df <- logs_df %>%
+    mutate(AlertLevel = factor(as.character(AlertLevel), levels = c("Normal","Warning","Alert","False Positive")))
   readr::write_csv(logs_df, LogsFileLoc)
   message("Logs updated (EmailSent = yes) for ", length(today_syndromes), " syndromes")
   

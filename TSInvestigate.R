@@ -168,5 +168,8 @@ if (length(kept_list)) {
   message("No rows exceeded threshold – nothing written to reportsData.RData")
 }
 
+# Ensure AlertLevel remains a factor with correct levels before writing
+logs_df <- logs_df %>%
+  mutate(AlertLevel = factor(as.character(AlertLevel), levels = log_levels))
 write_csv(logs_df, LogsFileLoc)
 message("autoepi_logs.csv updated (False Positives flagged where applicable).")

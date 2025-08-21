@@ -214,6 +214,14 @@ logs_df_check <- read_csv(LogsFileLoc, col_types = cols(
 message("Debug - After writing CSV, AlertLevel values: ", paste(logs_df_check$AlertLevel, collapse=", "))
 message("Debug - After writing CSV, AlertLevel class: ", class(logs_df_check$AlertLevel))
 
+# Check for any NA values in AlertLevel
+na_count_check <- sum(is.na(logs_df_check$AlertLevel))
+message("Debug - AlertLevel NA count after reading back: ", na_count_check)
+if (na_count_check > 0) {
+  message("Debug - Rows with NA AlertLevel:")
+  print(logs_df_check[is.na(logs_df_check$AlertLevel), ])
+}
+
 ## --- 7.  Save investigation + email artefacts ------------------------------
 investigate_df <- ts_all |>
   filter(AlertLevel %in% c("Warning", "Alert"))
