@@ -238,13 +238,23 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
   created_df <- dplyr::bind_rows(lapply(created, as.data.frame)) %>%
     dplyr::transmute(
       presented_name = as.character(syndrome),
-      html_path      = path
+      html_path      = path,
+      date_key       = as.character(date)
     )
   
-  # Match by syndrome name only (not by date, since we want to update the correct observation dates)
-  map_df <- logs_df %>%
-    dplyr::select(.idx, presented_name, AlertLevel, ObvsDate_parsed) %>%
-    dplyr::inner_join(created_df, by = "presented_name")
+  # Create a mapping from date keys to actual observation dates
+  # The date keys in the RData are like "20301", "20305" but represent actual dates
+  # We need to find the corresponding observation dates in the logs
+  date_mapping <- logs_df %>%
+    dplyr::filter(presented_name %in% created_df$presented_name) %>%
+    dplyr::select(presented_name, ObvsDate_parsed) %>%
+    dplyr::distinct()
+  
+  # Match by syndrome name and map to the correct observation dates
+  map_df <- created_df %>%
+    dplyr::inner_join(date_mapping, by = "presented_name") %>%
+    dplyr::left_join(logs_df %>% dplyr::select(.idx, presented_name, ObvsDate_parsed, AlertLevel), 
+                     by = c("presented_name", "ObvsDate_parsed"))
   
   if (nrow(map_df) > 0) {
     logs_df$ReportCreated[map_df$.idx]  <- "yes"
