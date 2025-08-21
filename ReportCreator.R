@@ -333,7 +333,7 @@ for (d in sort(unique(reports_df$ObvsDate))) {
     # Age group ordering function
     order_age_groups <- function(age_groups) {
       # Define the correct order for age groups (standard epidemiological age groups)
-      age_order <- c("0-5", "6-17", "18-25", "26-34", "35-44", "45-54", "55-64", "65+", "Unknown")
+      age_order <- c("0-5", "6-18", "19-25", "25-34", "35-54", "55-64", "65+", "Unknown")
       # Filter to only include age groups that exist in the data
       existing_ages <- intersect(age_order, age_groups)
       # Add any remaining age groups that weren't in our predefined order
