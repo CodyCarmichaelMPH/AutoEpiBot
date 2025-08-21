@@ -242,19 +242,26 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
       date_key       = as.character(date)
     )
   
-  # Create a mapping from date keys to actual observation dates
-  # The date keys in the RData are like "20301", "20305" but represent actual dates
-  # We need to find the corresponding observation dates in the logs
-  date_mapping <- logs_df %>%
-    dplyr::filter(presented_name %in% created_df$presented_name) %>%
-    dplyr::select(presented_name, ObvsDate_parsed) %>%
-    dplyr::distinct()
+  # Create a proper one-to-one mapping between date keys and observation dates
+  # We need to match each date key to its corresponding observation date
+  # For each syndrome, find the observation dates that have ReportCreated="yes" but ReportLocation=NA
+  # These are the ones that should be updated with the HTML paths
   
-  # Match by syndrome name and map to the correct observation dates
+  # Get the observation dates that need HTML paths (ReportCreated="yes" but ReportLocation=NA)
+  pending_reports <- logs_df %>%
+    dplyr::filter(ReportCreated == "yes", 
+                  is.na(ReportLocation) | ReportLocation == "NA" | !nzchar(ReportLocation)) %>%
+    dplyr::select(presented_name, ObvsDate_parsed, .idx, AlertLevel) %>%
+    dplyr::arrange(presented_name, ObvsDate_parsed)
+  
+  # Create a one-to-one mapping: each created HTML file maps to one pending report
   map_df <- created_df %>%
-    dplyr::inner_join(date_mapping, by = "presented_name") %>%
-    dplyr::left_join(logs_df %>% dplyr::select(.idx, presented_name, ObvsDate_parsed, AlertLevel), 
-                     by = c("presented_name", "ObvsDate_parsed"))
+    dplyr::arrange(presented_name, date_key) %>%
+    dplyr::bind_cols(
+      pending_reports %>%
+        dplyr::arrange(presented_name, ObvsDate_parsed) %>%
+        dplyr::select(ObvsDate_parsed, .idx, AlertLevel)
+    )
   
   if (nrow(map_df) > 0) {
     logs_df$ReportCreated[map_df$.idx]  <- "yes"
