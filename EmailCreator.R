@@ -166,6 +166,7 @@ main <- function(){
     col_types = readr::cols(
       ObvsDate       = readr::col_date(format = logs_date_fmt),
       presented_name = readr::col_character(),
+      AlertLevel     = readr::col_factor(levels = c("Normal","Warning","Alert","False Positive")),
       ReportCreated  = readr::col_factor(levels = c("no","yes")),
       ReportLocation = readr::col_character(),
       EmailSent      = readr::col_factor(levels = c("no","yes"))
@@ -306,6 +307,14 @@ main <- function(){
 
   readr::write_csv(logs_df, LogsFileLoc)
   message("Logs updated (EmailSent = yes) for ", length(today_syndromes), " syndromes")
+  
+  # Remove AlertLevel column from logs after email is sent
+  if (sw$send_enabled && !sw$display_only) {
+    logs_df_clean <- logs_df %>%
+      select(-AlertLevel)
+    readr::write_csv(logs_df_clean, LogsFileLoc)
+    message("AlertLevel column removed from logs after email sent")
+  }
   
   # Clean up RData files after successful email send
   if (sw$send_enabled && !sw$display_only) {

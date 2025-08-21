@@ -214,11 +214,12 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
                              col_types = readr::cols(
                                ObvsDate       = readr::col_date(),
                                presented_name = readr::col_character(),
+                               AlertLevel     = readr::col_factor(levels = c("Normal","Warning","Alert","False Positive")),
                                ReportCreated  = readr::col_factor(levels = c("no","yes")),
                                ReportLocation = readr::col_character(),
                                EmailSent      = readr::col_factor(levels = c("no","yes"))
                              ))
-  needed <- c("ObvsDate","presented_name","ReportCreated","ReportLocation","EmailSent")
+  needed <- c("ObvsDate","presented_name","AlertLevel","ReportCreated","ReportLocation","EmailSent")
   if (!all(needed %in% names(logs_raw))) {
     warning("Logs CSV missing required columns; skipping update: ", logs_path)
     quit(status = 0)
@@ -250,7 +251,7 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
   pending_reports <- logs_df %>%
     dplyr::filter(ReportCreated == "yes", 
                   is.na(ReportLocation) | ReportLocation == "NA" | !nzchar(ReportLocation)) %>%
-    dplyr::select(presented_name, ObvsDate_parsed, .idx) %>%
+    dplyr::select(presented_name, ObvsDate_parsed, .idx, AlertLevel) %>%
     dplyr::arrange(presented_name, ObvsDate_parsed)
   
   # Create a one-to-one mapping: each created HTML file maps to one pending report
@@ -259,20 +260,30 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
     dplyr::bind_cols(
       pending_reports %>%
         dplyr::arrange(presented_name, ObvsDate_parsed) %>%
-        dplyr::select(ObvsDate_parsed, .idx)
+        dplyr::select(ObvsDate_parsed, .idx, AlertLevel)
     )
   
   if (nrow(map_df) > 0) {
     logs_df$ReportCreated[map_df$.idx]  <- "yes"
     logs_df$ReportLocation[map_df$.idx] <- map_df$html_path
     
-
+    # Update False Positives: any entries that had Warning/Alert but no report generated
+    logs_df <- logs_df %>%
+      mutate(
+        AlertLevel = factor(case_when(
+          AlertLevel %in% c("Warning", "Alert") & ReportCreated == "no" ~ "False Positive",
+          TRUE ~ as.character(AlertLevel)
+        ), levels = c("Normal","Warning","Alert","False Positive"))
+      )
+    
+    aw_count <- sum(as.character(map_df$AlertLevel) %in% c("Warning","Alert"), na.rm = TRUE)
     
     logs_out <- logs_df %>% dplyr::select(-.idx, -ObvsDate_parsed)
     readr::write_csv(logs_out, logs_path)
     
     message("\n=== Logs Update ===")
     message("Updated rows:               ", nrow(map_df))
+    message("Alerts/Warnings in updates: ", aw_count)
     message("CSV written:                ", logs_path)
   } else {
     message("\n=== Logs Update ===")

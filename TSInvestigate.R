@@ -41,6 +41,7 @@ logs_df <- read_csv(LogsFileLoc,
                     col_types = cols(
                       ObvsDate       = col_date(),
                       presented_name = col_character(),
+                      AlertLevel     = col_factor(levels = log_levels),
                       ReportCreated  = col_factor(levels = c("no", "yes")),
                       ReportLocation = col_character(),
                       EmailSent      = col_factor(levels = c("no", "yes"))
@@ -167,5 +168,8 @@ if (length(kept_list)) {
   message("No rows exceeded threshold – nothing written to reportsData.RData")
 }
 
+# Ensure AlertLevel remains a factor with correct levels before writing
+logs_df <- logs_df %>%
+  mutate(AlertLevel = factor(as.character(AlertLevel), levels = log_levels))
 write_csv(logs_df, LogsFileLoc)
-message("autoepi_logs.csv updated.")
+message("autoepi_logs.csv updated (False Positives flagged where applicable).")

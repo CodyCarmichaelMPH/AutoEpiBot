@@ -27,11 +27,14 @@ load("LogsFileLoc.RData")                 # gives LogsFileLoc
 if (!exists("LogsFileLoc"))
   stop("LogsFileLoc not found – run LogsCreate.R first.")
 
+log_levels <- c("Normal", "Warning", "Alert", "False Positive")
+
 logs_df <- if (file.exists(LogsFileLoc)) {
   read_csv(LogsFileLoc,
            col_types = cols(
              ObvsDate       = col_date(),
              presented_name = col_character(),
+             AlertLevel     = col_factor(levels = log_levels),
              ReportCreated  = col_factor(levels = c("no", "yes")),
              ReportLocation = col_character(),
              EmailSent      = col_factor(levels = c("no", "yes"))
@@ -87,7 +90,7 @@ for (i in seq_len(nrow(syndromes))) {
   ## 4a.  Pick sensible start-date
   last_sig_df <- logs_df |>
     filter(presented_name == s_name,
-           ReportCreated == "yes")
+           AlertLevel %in% c("Warning", "Alert", "False Positive"))
   
   last_sig <- if (nrow(last_sig_df) > 0) {
     last_sig_df |>
@@ -133,6 +136,12 @@ for (i in seq_len(nrow(syndromes))) {
     transmute(
       ObvsDate       = as.Date(date),
       presented_name = s_name,
+      AlertLevel     = factor(case_when(
+        as.numeric(colorID) >= 3 ~ "Alert",
+        as.numeric(colorID) == 2 ~ "Warning",
+        as.numeric(colorID) <= 1 ~ "Normal",
+        TRUE                     ~ "Normal"
+      ), levels = log_levels),
       count,
       expected,
       Syndrome_Snippet = s_ccdd
@@ -176,7 +185,7 @@ write_csv(logs_df, LogsFileLoc)
 
 ## --- 7.  Save investigation + email artefacts ------------------------------
 investigate_df <- ts_all |>
-  filter(count > expected * 1.5)  # Flag records with count > 1.5x expected
+  filter(AlertLevel %in% c("Warning", "Alert"))
 
 save(investigate_df, file = "InvestigateTSRecords.RData")
 save(email_df,       file = "EmailStarterInfo.RData")
