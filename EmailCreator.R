@@ -308,12 +308,16 @@ main <- function(){
   readr::write_csv(logs_df, LogsFileLoc)
   message("Logs updated (EmailSent = yes) for ", length(today_syndromes), " syndromes")
   
-  # Remove AlertLevel column from logs after email is sent
+  # Update AlertLevel based on report creation status
   if (sw$send_enabled && !sw$display_only) {
-    logs_df_clean <- logs_df %>%
-      select(-AlertLevel)
-    readr::write_csv(logs_df_clean, LogsFileLoc)
-    message("AlertLevel column removed from logs after email sent")
+    logs_df_updated <- logs_df %>%
+      mutate(AlertLevel = case_when(
+        ReportCreated == "yes" ~ "Alert",
+        ReportCreated == "no" ~ "Normal",
+        TRUE ~ AlertLevel  # Keep existing value if ReportCreated is NA
+      ))
+    readr::write_csv(logs_df_updated, LogsFileLoc)
+    message("AlertLevel updated: 'Alert' for reports created, 'Normal' for no reports")
   }
   
   # Clean up RData files after successful email send
