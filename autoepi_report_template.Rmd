@@ -215,17 +215,10 @@ if (has(clim_tab)) {
   # Debug: print what station IDs we're working with
   if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
     message("Debug - Climate station IDs: ", paste(unique(clim_tab$StationRaw), collapse=", "))
-    message("Debug - Climate station IDs (lowercase): ", paste(tolower(unique(clim_tab$StationRaw)), collapse=", "))
     
-    # Test the mapping function on each station ID
-    for (station_id in unique(clim_tab$StationRaw)) {
-      mapped_name <- map_station_name(station_id)
-      message("Debug - Mapping '", station_id, "' -> '", mapped_name, "'")
-    }
-    
-    clim_tab$Station <- map_station_name(clim_tab$StationRaw)
+    # Keep the station IDs but rename the column for display
     clim_tab_display <- clim_tab %>% 
-      select(-Station, -StationRaw)
+      rename(`Climate Station` = StationRaw)
   } else {
     clim_tab_display <- clim_tab
   }
@@ -259,10 +252,10 @@ if (has(aqi_stn)) {
     message("Debug - AQI StationID values: ", paste(unique(aqi_stn$StationID), collapse=", "))
   }
   
-  # Remove station name columns and keep original data
+  # Remove station name columns and AQSID, keep original data
   if (!is.null(aqi_stn)) {
     aqi_stn_display <- aqi_stn %>%
-      select(-any_of(c("StationName", "SiteName")))
+      select(-any_of(c("StationName", "SiteName", "AQSID")))
   } else {
     aqi_stn_display <- aqi_stn
   }
