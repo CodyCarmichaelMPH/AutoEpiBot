@@ -134,7 +134,8 @@ map_station_name <- function(station_raw) {
     "sew-olm" = "Olympia, Washington",
     "otx-omk" = "Omak, Washington",
     "sew-bli" = "Bellingham, Washington",
-    "otx-dew" = "Deer Park, Washington"
+    "otx-dew" = "Deer Park, Washington",
+    "oly-sew" = "Seattle, Washington"  # Add this mapping for the actual station ID
   )
   # Convert input to lowercase for case-insensitive matching
   station_raw_lower <- tolower(station_raw)
@@ -222,10 +223,13 @@ if (has(aqi_plot)) {
 
 if (has(aqi_stn)) {
   cat("### AQI Stations\n")
-  # Apply station name mapping if StationID column exists
-  if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
+  # Use SiteName as station name if available, otherwise map StationID
+  if (!is.null(aqi_stn) && "SiteName" %in% names(aqi_stn)) {
+    aqi_stn$StationName <- aqi_stn$SiteName
+    aqi_stn_display <- aqi_stn
+  } else if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
     aqi_stn$StationName <- map_station_name(aqi_stn$StationID)
-    aqi_stn_display <- aqi_stn %>% select(-StationID)
+    aqi_stn_display <- aqi_stn
   } else {
     aqi_stn_display <- aqi_stn
   }

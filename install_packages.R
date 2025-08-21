@@ -24,8 +24,20 @@ required_packages <- c(
   "plotly",     # Interactive plots
   "leaflet",    # Interactive maps
   
+  # Spatial and mapping
+  "sf",         # Spatial data handling
+  "geojsonsf",  # GeoJSON processing
+  
+  # RMarkdown and reporting
+  "rmarkdown",  # RMarkdown rendering
+  "knitr",      # RMarkdown processing
+  
+  # File system operations
+  "fs",         # File system operations
+  
   # Email (Windows only)
-  "RDCOMClient" # Outlook integration
+  "RDCOMClient", # Outlook integration (Windows)
+  "Microsoft365R" # Microsoft Graph API (alternative email)
 )
 
 # Function to install if not already installed

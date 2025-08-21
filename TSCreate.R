@@ -179,6 +179,8 @@ new_entries <- ts_all |>
 # Debug: check new entries before writing
 if (nrow(new_entries) > 0) {
   message("Debug - New entries AlertLevel values: ", paste(new_entries$AlertLevel, collapse=", "))
+  message("Debug - New entries AlertLevel class: ", class(new_entries$AlertLevel))
+  message("Debug - New entries AlertLevel levels: ", paste(levels(new_entries$AlertLevel), collapse=", "))
   message("Debug - New entries count: ", nrow(new_entries))
 }
 
