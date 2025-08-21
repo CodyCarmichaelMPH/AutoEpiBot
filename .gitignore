@@ -44,8 +44,8 @@ Logs/
 test_*.R
 wireframe.txt
 
-# Data layers (large files)
-ZipLayer/
-
 # Documentation (keep local only)
 Documentation/
+
+# Test logs (keep local only)
+TestLogs/
