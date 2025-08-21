@@ -169,12 +169,20 @@ ts_all   <- bind_rows(ts_list)
 email_df <- bind_rows(email_log)
 
 ## --- 6.  Update log CSV ----------------------------------------------------
+# Debug: check ts_all AlertLevel values before anti_join
+message("Debug - ts_all AlertLevel values: ", paste(ts_all$AlertLevel, collapse=", "))
+message("Debug - ts_all AlertLevel class: ", class(ts_all$AlertLevel))
+
 new_entries <- ts_all |>
   anti_join(logs_df, by = c("ObvsDate", "presented_name")) |>
   mutate(ReportCreated  = factor("no", levels = c("no", "yes")),
          ReportLocation = "",
          EmailSent      = factor("no", levels = c("no", "yes"))) |>
   select(names(logs_df))
+
+# Debug: check new_entries after anti_join and select
+message("Debug - new_entries AlertLevel values after anti_join: ", paste(new_entries$AlertLevel, collapse=", "))
+message("Debug - new_entries AlertLevel class after anti_join: ", class(new_entries$AlertLevel))
 
 # Debug: check new entries before writing
 if (nrow(new_entries) > 0) {
@@ -192,13 +200,33 @@ if (nrow(new_entries) > 0) {
   print(new_entries)
 }
 
+# Debug: check logs_df before bind_rows
+message("Debug - logs_df AlertLevel values before bind_rows: ", paste(logs_df$AlertLevel, collapse=", "))
+message("Debug - logs_df AlertLevel class before bind_rows: ", class(logs_df$AlertLevel))
+
 logs_df <- bind_rows(logs_df, new_entries) |>
   arrange(ObvsDate, presented_name)
+
+# Debug: check logs_df after bind_rows
+message("Debug - logs_df AlertLevel values after bind_rows: ", paste(logs_df$AlertLevel, collapse=", "))
+message("Debug - logs_df AlertLevel class after bind_rows: ", class(logs_df$AlertLevel))
 
 # Debug: check logs_df before writing
 message("Debug - logs_df AlertLevel values before writing: ", paste(logs_df$AlertLevel, collapse=", "))
 message("Debug - logs_df AlertLevel class before writing: ", class(logs_df$AlertLevel))
 message("Debug - logs_df AlertLevel levels before writing: ", paste(levels(logs_df$AlertLevel), collapse=", "))
+
+# Check for any NA values before writing
+na_count_before <- sum(is.na(logs_df$AlertLevel))
+message("Debug - AlertLevel NA count before writing: ", na_count_before)
+if (na_count_before > 0) {
+  message("Debug - Rows with NA AlertLevel before writing:")
+  print(logs_df[is.na(logs_df$AlertLevel), ])
+}
+
+# Ensure AlertLevel is properly formatted before writing
+logs_df <- logs_df %>%
+  mutate(AlertLevel = factor(as.character(AlertLevel), levels = log_levels))
 
 write_csv(logs_df, LogsFileLoc)
 

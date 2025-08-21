@@ -199,7 +199,9 @@ if (has(clim_tab)) {
   if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
     message("Debug - Climate station IDs: ", paste(unique(clim_tab$StationRaw), collapse=", "))
     clim_tab$Station <- map_station_name(clim_tab$StationRaw)
-    clim_tab_display <- clim_tab %>% select(-StationRaw)
+    clim_tab_display <- clim_tab %>% 
+      rename(`Station Name` = Station, `Station ID` = StationRaw) %>%
+      relocate(`Station Name`, `Station ID`, .after = 1)
   } else {
     clim_tab_display <- clim_tab
   }
