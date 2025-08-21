@@ -68,6 +68,37 @@ df_to_html_table <- function(df, caption=NULL){
   )
 }
 
+cleanup_rdata_files <- function(){
+  # Find and delete AutoEpi_Report_*.RData files from the Reports directory
+  if (exists("autoepi_settings") && !is.null(autoepi_settings$IO$Reports_Dir)) {
+    reports_dir <- autoepi_settings$IO$Reports_Dir
+    if (dir.exists(reports_dir)) {
+      rdata_files <- list.files(
+        path = reports_dir,
+        pattern = "AutoEpi_Report_.*\\.RData$",
+        full.names = TRUE
+      )
+      if (length(rdata_files) > 0) {
+        for (file in rdata_files) {
+          tryCatch({
+            file.remove(file)
+            message("Deleted RData file: ", basename(file))
+          }, error = function(e) {
+            message("Failed to delete RData file: ", basename(file), " - ", e$message)
+          })
+        }
+        message("Cleanup complete: ", length(rdata_files), " RData file(s) removed")
+      } else {
+        message("No RData files found to clean up")
+      }
+    } else {
+      message("Reports directory not found: ", reports_dir)
+    }
+  } else {
+    message("AutoEpi settings not available for cleanup")
+  }
+}
+
 ## ────────────────────────────────────────────────────────────────────────────
 ## 1) Switches (CLI > env > settings)
 ## ────────────────────────────────────────────────────────────────────────────
@@ -275,6 +306,11 @@ main <- function(){
     ))
   readr::write_csv(logs_df, LogsFileLoc)
   message("Logs updated (EmailSent = yes) for ", length(today_syndromes), " syndromes")
+  
+  # Clean up RData files after successful email send
+  if (sw$send_enabled && !sw$display_only) {
+    cleanup_rdata_files()
+  }
   
   invisible(TRUE)
 }

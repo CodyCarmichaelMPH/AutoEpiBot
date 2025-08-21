@@ -30,18 +30,16 @@ candidate_csvs <- list.files(logs_dir,
 if (length(candidate_csvs)) {
   csv_file <- candidate_csvs[order(file.info(candidate_csvs)$mtime,
                                    decreasing = TRUE)][1]
+  logs_df  <- read.csv(csv_file, stringsAsFactors = FALSE)
   
-  # Use readr for proper column type handling
-  suppressPackageStartupMessages(library(readr))
-  logs_df <- read_csv(csv_file,
-                      col_types = cols(
-                        ObvsDate       = col_date(),
-                        presented_name = col_character(),
-                        AlertLevel     = col_factor(levels = c("Normal", "Warning", "Alert", "False Positive")),
-                        ReportCreated  = col_factor(levels = c("no", "yes")),
-                        ReportLocation = col_character(),
-                        EmailSent      = col_factor(levels = c("no", "yes"))
-                      ))
+  # Re-enforce factor levels just in case someone edited by hand
+  logs_df$AlertLevel    <- factor(logs_df$AlertLevel,
+                                  levels = c("Normal", "Warning",
+                                             "Alert", "False Positive"))
+  logs_df$ReportCreated <- factor(logs_df$ReportCreated,
+                                  levels = c("no", "yes"))
+  logs_df$EmailSent     <- factor(logs_df$EmailSent,
+                                  levels = c("no", "yes"))
   
   message("Existing log found: ", csv_file)
   
@@ -64,7 +62,7 @@ if (length(candidate_csvs)) {
 }
 
 ## --- 3.  Persist / refresh the CSV -----------------------------------------
-write_csv(logs_df, csv_file)
+write.csv(logs_df, csv_file, row.names = FALSE)
 
 ## --- 4.  Advertise log location --------------------------------------------
 LogsFileLoc <- csv_file
