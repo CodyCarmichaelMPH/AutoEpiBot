@@ -225,8 +225,7 @@ if (has(clim_tab)) {
     
     clim_tab$Station <- map_station_name(clim_tab$StationRaw)
     clim_tab_display <- clim_tab %>% 
-      rename(`Station Name` = Station, `Station ID` = StationRaw) %>%
-      relocate(`Station Name`, `Station ID`, .after = 1)
+      select(-Station, -StationRaw)
   } else {
     clim_tab_display <- clim_tab
   }
@@ -260,13 +259,10 @@ if (has(aqi_stn)) {
     message("Debug - AQI StationID values: ", paste(unique(aqi_stn$StationID), collapse=", "))
   }
   
-  # Use SiteName as station name if available, otherwise map StationID
-  if (!is.null(aqi_stn) && "SiteName" %in% names(aqi_stn)) {
-    aqi_stn$StationName <- aqi_stn$SiteName
-    aqi_stn_display <- aqi_stn
-  } else if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
-    aqi_stn$StationName <- map_aqi_station_name(aqi_stn$StationID)
-    aqi_stn_display <- aqi_stn
+  # Remove station name columns and keep original data
+  if (!is.null(aqi_stn)) {
+    aqi_stn_display <- aqi_stn %>%
+      select(-any_of(c("StationName", "SiteName")))
   } else {
     aqi_stn_display <- aqi_stn
   }

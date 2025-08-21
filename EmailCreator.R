@@ -166,7 +166,6 @@ main <- function(){
     col_types = readr::cols(
       ObvsDate       = readr::col_date(format = logs_date_fmt),
       presented_name = readr::col_character(),
-      AlertLevel     = readr::col_factor(levels = c("Normal","Warning","Alert","False Positive")),
       ReportCreated  = readr::col_factor(levels = c("no","yes")),
       ReportLocation = readr::col_character(),
       EmailSent      = readr::col_factor(levels = c("no","yes"))
@@ -198,7 +197,7 @@ main <- function(){
   # Show some sample data
   sample_logs <- logs_df %>%
     filter(ReportCreated == "yes") %>%
-    select(ObvsDate, presented_name, ReportLocation, AlertLevel) %>%
+    select(ObvsDate, presented_name, ReportLocation) %>%
     head(5)
   message("Debug - Sample log entries:")
   print(sample_logs)
@@ -304,9 +303,7 @@ main <- function(){
       factor("yes", levels=c("no","yes")),
       EmailSent
     ))
-  # Ensure AlertLevel remains a factor with correct levels before writing
-  logs_df <- logs_df %>%
-    mutate(AlertLevel = factor(as.character(AlertLevel), levels = c("Normal","Warning","Alert","False Positive")))
+
   readr::write_csv(logs_df, LogsFileLoc)
   message("Logs updated (EmailSent = yes) for ", length(today_syndromes), " syndromes")
   

@@ -27,14 +27,11 @@ load("LogsFileLoc.RData")                 # gives LogsFileLoc
 if (!exists("LogsFileLoc"))
   stop("LogsFileLoc not found – run LogsCreate.R first.")
 
-log_levels <- c("Normal", "Warning", "Alert", "False Positive")
-
 logs_df <- if (file.exists(LogsFileLoc)) {
   read_csv(LogsFileLoc,
            col_types = cols(
              ObvsDate       = col_date(),
              presented_name = col_character(),
-             AlertLevel     = col_factor(levels = log_levels),
              ReportCreated  = col_factor(levels = c("no", "yes")),
              ReportLocation = col_character(),
              EmailSent      = col_factor(levels = c("no", "yes"))
@@ -90,7 +87,7 @@ for (i in seq_len(nrow(syndromes))) {
   ## 4a.  Pick sensible start-date
   last_sig_df <- logs_df |>
     filter(presented_name == s_name,
-           AlertLevel %in% c("Warning", "Alert", "False Positive"))
+           ReportCreated == "yes")
   
   last_sig <- if (nrow(last_sig_df) > 0) {
     last_sig_df |>
@@ -130,28 +127,18 @@ for (i in seq_len(nrow(syndromes))) {
     ts_data$colorID <- ifelse(ts_data$count > ts_data$expected * 1.5, 2, 1)
   }
   
-  # Debug: print colorID values to understand what we're working with
-  message("Debug - ", s_name, ": colorID values = ", paste(ts_data$colorID, collapse=", "))
-  message("Debug - ", s_name, ": colorID class = ", class(ts_data$colorID))
+
   
   ts_df <- ts_data |>
     transmute(
       ObvsDate       = as.Date(date),
       presented_name = s_name,
-      AlertLevel     = factor(case_when(
-        as.numeric(colorID) >= 3 ~ "Alert",
-        as.numeric(colorID) == 2 ~ "Warning",
-        as.numeric(colorID) <= 1 ~ "Normal",
-        TRUE                     ~ "Normal"
-      ), levels = log_levels),
       count,
       expected,
       Syndrome_Snippet = s_ccdd
     )
   
-  # Debug: print AlertLevel values to see if they're being assigned correctly
-  message("Debug - ", s_name, ": AlertLevel values = ", paste(ts_df$AlertLevel, collapse=", "))
-  message("Debug - ", s_name, ": AlertLevel class = ", class(ts_df$AlertLevel))
+
   
   ts_list[[length(ts_list) + 1]] <- ts_df
   email_log[[length(email_log) + 1]] <-
@@ -169,10 +156,6 @@ ts_all   <- bind_rows(ts_list)
 email_df <- bind_rows(email_log)
 
 ## --- 6.  Update log CSV ----------------------------------------------------
-# Debug: check ts_all AlertLevel values before anti_join
-message("Debug - ts_all AlertLevel values: ", paste(ts_all$AlertLevel, collapse=", "))
-message("Debug - ts_all AlertLevel class: ", class(ts_all$AlertLevel))
-
 new_entries <- ts_all |>
   anti_join(logs_df, by = c("ObvsDate", "presented_name")) |>
   mutate(ReportCreated  = factor("no", levels = c("no", "yes")),
@@ -180,79 +163,20 @@ new_entries <- ts_all |>
          EmailSent      = factor("no", levels = c("no", "yes"))) |>
   select(names(logs_df))
 
-# Debug: check new_entries after anti_join and select
-message("Debug - new_entries AlertLevel values after anti_join: ", paste(new_entries$AlertLevel, collapse=", "))
-message("Debug - new_entries AlertLevel class after anti_join: ", class(new_entries$AlertLevel))
-
-# Debug: check new entries before writing
 if (nrow(new_entries) > 0) {
-  message("Debug - New entries AlertLevel values: ", paste(new_entries$AlertLevel, collapse=", "))
-  message("Debug - New entries AlertLevel class: ", class(new_entries$AlertLevel))
-  message("Debug - New entries AlertLevel levels: ", paste(levels(new_entries$AlertLevel), collapse=", "))
   message("Debug - New entries count: ", nrow(new_entries))
-  
-  # Check if any AlertLevel values are NA
-  na_count <- sum(is.na(new_entries$AlertLevel))
-  message("Debug - AlertLevel NA count: ", na_count)
-  
-  # Show the full new_entries data frame
   message("Debug - Full new_entries data:")
   print(new_entries)
 }
 
-# Debug: check logs_df before bind_rows
-message("Debug - logs_df AlertLevel values before bind_rows: ", paste(logs_df$AlertLevel, collapse=", "))
-message("Debug - logs_df AlertLevel class before bind_rows: ", class(logs_df$AlertLevel))
-
 logs_df <- bind_rows(logs_df, new_entries) |>
   arrange(ObvsDate, presented_name)
 
-# Debug: check logs_df after bind_rows
-message("Debug - logs_df AlertLevel values after bind_rows: ", paste(logs_df$AlertLevel, collapse=", "))
-message("Debug - logs_df AlertLevel class after bind_rows: ", class(logs_df$AlertLevel))
-
-# Debug: check logs_df before writing
-message("Debug - logs_df AlertLevel values before writing: ", paste(logs_df$AlertLevel, collapse=", "))
-message("Debug - logs_df AlertLevel class before writing: ", class(logs_df$AlertLevel))
-message("Debug - logs_df AlertLevel levels before writing: ", paste(levels(logs_df$AlertLevel), collapse=", "))
-
-# Check for any NA values before writing
-na_count_before <- sum(is.na(logs_df$AlertLevel))
-message("Debug - AlertLevel NA count before writing: ", na_count_before)
-if (na_count_before > 0) {
-  message("Debug - Rows with NA AlertLevel before writing:")
-  print(logs_df[is.na(logs_df$AlertLevel), ])
-}
-
-# Ensure AlertLevel is properly formatted before writing
-logs_df <- logs_df %>%
-  mutate(AlertLevel = factor(as.character(AlertLevel), levels = log_levels))
-
 write_csv(logs_df, LogsFileLoc)
-
-# Debug: read back the CSV to see what happened
-logs_df_check <- read_csv(LogsFileLoc, col_types = cols(
-  ObvsDate = col_date(),
-  presented_name = col_character(),
-  AlertLevel = col_factor(levels = log_levels),
-  ReportCreated = col_factor(levels = c("no", "yes")),
-  ReportLocation = col_character(),
-  EmailSent = col_factor(levels = c("no", "yes"))
-))
-message("Debug - After writing CSV, AlertLevel values: ", paste(logs_df_check$AlertLevel, collapse=", "))
-message("Debug - After writing CSV, AlertLevel class: ", class(logs_df_check$AlertLevel))
-
-# Check for any NA values in AlertLevel
-na_count_check <- sum(is.na(logs_df_check$AlertLevel))
-message("Debug - AlertLevel NA count after reading back: ", na_count_check)
-if (na_count_check > 0) {
-  message("Debug - Rows with NA AlertLevel:")
-  print(logs_df_check[is.na(logs_df_check$AlertLevel), ])
-}
 
 ## --- 7.  Save investigation + email artefacts ------------------------------
 investigate_df <- ts_all |>
-  filter(AlertLevel %in% c("Warning", "Alert"))
+  filter(count > expected * 1.5)  # Flag records with count > 1.5x expected
 
 save(investigate_df, file = "InvestigateTSRecords.RData")
 save(email_df,       file = "EmailStarterInfo.RData")

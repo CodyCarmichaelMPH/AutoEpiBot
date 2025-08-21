@@ -573,7 +573,6 @@ if (file.exists("LogsFileLoc.RData")) {
                         col_types = cols(
                           ObvsDate       = col_date(),
                           presented_name = col_character(),
-                          AlertLevel     = col_factor(levels = log_levels),
                           ReportCreated  = col_factor(levels = c("no","yes")),
                           ReportLocation = col_character(),
                           EmailSent      = col_factor(levels = c("no","yes"))
@@ -599,9 +598,7 @@ if (file.exists("LogsFileLoc.RData")) {
           ReportCreated
         )
       )
-    # Ensure AlertLevel remains a factor with correct levels before writing
-    logs_df <- logs_df %>%
-      mutate(AlertLevel = factor(as.character(AlertLevel), levels = log_levels))
+
     write_csv(logs_df, LogsFileLoc)
     updated_count <- logs_df %>%
       filter(paste(ObvsDate, presented_name) %in% paste(report_combinations$ObvsDate, report_combinations$presented_name)) %>%
