@@ -210,15 +210,15 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
   }
   
   # minimal deps already loaded above: readr, dplyr
-    logs_raw <- readr::read_csv(logs_path,
-                             col_types = readr::cols(
-                               ObvsDate       = readr::col_date(),
-                               presented_name = readr::col_character(),
-                               AlertLevel     = readr::col_factor(levels = c("Normal","Warning","Alert","False Positive")),
-                               ReportCreated  = readr::col_factor(levels = c("no","yes")),
-                               ReportLocation = readr::col_character(),
-                               EmailSent      = readr::col_factor(levels = c("no","yes"))
-                             ))
+        logs_raw <- readr::read_csv(logs_path,
+                              col_types = readr::cols(
+                                ObvsDate       = readr::col_date(),
+                                presented_name = readr::col_character(),
+                                AlertLevel     = readr::col_character(),  # Read as character first
+                                ReportCreated  = readr::col_factor(levels = c("no","yes")),
+                                ReportLocation = readr::col_character(),
+                                EmailSent      = readr::col_factor(levels = c("no","yes"))
+                              ))
   needed <- c("ObvsDate","presented_name","AlertLevel","ReportCreated","ReportLocation","EmailSent")
   if (!all(needed %in% names(logs_raw))) {
     warning("Logs CSV missing required columns; skipping update: ", logs_path)
@@ -270,10 +270,10 @@ if (exists("LogsFileLoc") && is.character(LogsFileLoc) && nzchar(LogsFileLoc) &&
     # Update False Positives: any entries that had Warning/Alert but no report generated
     logs_df <- logs_df %>%
       mutate(
-        AlertLevel = factor(case_when(
+        AlertLevel = case_when(
           AlertLevel %in% c("Warning", "Alert") & ReportCreated == "no" ~ "False Positive",
-          TRUE ~ as.character(AlertLevel)
-        ), levels = c("Normal","Warning","Alert","False Positive"))
+          TRUE ~ AlertLevel
+        )
       )
     
     aw_count <- sum(as.character(map_df$AlertLevel) %in% c("Warning","Alert"), na.rm = TRUE)

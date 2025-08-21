@@ -600,7 +600,7 @@ if (file.exists("LogsFileLoc.RData")) {
                         col_types = cols(
                           ObvsDate       = col_date(),
                           presented_name = col_character(),
-                          AlertLevel     = col_factor(levels = c("Normal","Warning","Alert","False Positive")),
+                                                     AlertLevel     = col_character(),  # Read as character first
                           ReportCreated  = col_factor(levels = c("no","yes")),
                           ReportLocation = col_character(),
                           EmailSent      = col_factor(levels = c("no","yes"))

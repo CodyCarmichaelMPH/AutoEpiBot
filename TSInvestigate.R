@@ -41,7 +41,7 @@ logs_df <- read_csv(LogsFileLoc,
                     col_types = cols(
                       ObvsDate       = col_date(),
                       presented_name = col_character(),
-                      AlertLevel     = col_factor(levels = log_levels),
+                                             AlertLevel     = col_character(),  # Read as character first
                       ReportCreated  = col_factor(levels = c("no", "yes")),
                       ReportLocation = col_character(),
                       EmailSent      = col_factor(levels = c("no", "yes"))
@@ -151,11 +151,11 @@ for (j in seq_len(nrow(investigate_df))) {
              sd_lookback    = stats$s)
     
   } else {
-    logs_df <- logs_df |>
-      mutate(AlertLevel = ifelse(presented_name == syn_name &
-                                   ObvsDate == d_obs,
-                                 factor("False Positive", levels = log_levels),
-                                 AlertLevel))
+         logs_df <- logs_df |>
+       mutate(AlertLevel = ifelse(presented_name == syn_name &
+                                    ObvsDate == d_obs,
+                                  "False Positive",
+                                  AlertLevel))
   }
 }
 
@@ -168,8 +168,6 @@ if (length(kept_list)) {
   message("No rows exceeded threshold – nothing written to reportsData.RData")
 }
 
-# Ensure AlertLevel remains a factor with correct levels before writing
-logs_df <- logs_df %>%
-  mutate(AlertLevel = factor(as.character(AlertLevel), levels = log_levels))
+# Write logs without factor conversion
 write_csv(logs_df, LogsFileLoc)
 message("autoepi_logs.csv updated (False Positives flagged where applicable).")

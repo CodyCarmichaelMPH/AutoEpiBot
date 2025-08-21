@@ -166,7 +166,7 @@ main <- function(){
     col_types = readr::cols(
       ObvsDate       = readr::col_date(format = logs_date_fmt),
       presented_name = readr::col_character(),
-      AlertLevel     = readr::col_factor(levels = c("Normal","Warning","Alert","False Positive")),
+      AlertLevel     = readr::col_character(),  # Read as character first
       ReportCreated  = readr::col_factor(levels = c("no","yes")),
       ReportLocation = readr::col_character(),
       EmailSent      = readr::col_factor(levels = c("no","yes"))

@@ -34,7 +34,7 @@ logs_df <- if (file.exists(LogsFileLoc)) {
            col_types = cols(
              ObvsDate       = col_date(),
              presented_name = col_character(),
-             AlertLevel     = col_factor(levels = log_levels),
+             AlertLevel     = col_character(),  # Read as character first
              ReportCreated  = col_factor(levels = c("no", "yes")),
              ReportLocation = col_character(),
              EmailSent      = col_factor(levels = c("no", "yes"))
@@ -136,12 +136,12 @@ for (i in seq_len(nrow(syndromes))) {
     transmute(
       ObvsDate       = as.Date(date),
       presented_name = s_name,
-      AlertLevel     = factor(case_when(
+      AlertLevel     = case_when(
         as.numeric(colorID) >= 3 ~ "Alert",
         as.numeric(colorID) == 2 ~ "Warning",
         as.numeric(colorID) <= 1 ~ "Normal",
         TRUE                     ~ "Normal"
-      ), levels = log_levels),
+      ),
       count,
       expected,
       Syndrome_Snippet = s_ccdd
