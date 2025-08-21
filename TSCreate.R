@@ -182,12 +182,37 @@ if (nrow(new_entries) > 0) {
   message("Debug - New entries AlertLevel class: ", class(new_entries$AlertLevel))
   message("Debug - New entries AlertLevel levels: ", paste(levels(new_entries$AlertLevel), collapse=", "))
   message("Debug - New entries count: ", nrow(new_entries))
+  
+  # Check if any AlertLevel values are NA
+  na_count <- sum(is.na(new_entries$AlertLevel))
+  message("Debug - AlertLevel NA count: ", na_count)
+  
+  # Show the full new_entries data frame
+  message("Debug - Full new_entries data:")
+  print(new_entries)
 }
 
 logs_df <- bind_rows(logs_df, new_entries) |>
   arrange(ObvsDate, presented_name)
 
+# Debug: check logs_df before writing
+message("Debug - logs_df AlertLevel values before writing: ", paste(logs_df$AlertLevel, collapse=", "))
+message("Debug - logs_df AlertLevel class before writing: ", class(logs_df$AlertLevel))
+message("Debug - logs_df AlertLevel levels before writing: ", paste(levels(logs_df$AlertLevel), collapse=", "))
+
 write_csv(logs_df, LogsFileLoc)
+
+# Debug: read back the CSV to see what happened
+logs_df_check <- read_csv(LogsFileLoc, col_types = cols(
+  ObvsDate = col_date(),
+  presented_name = col_character(),
+  AlertLevel = col_factor(levels = log_levels),
+  ReportCreated = col_factor(levels = c("no", "yes")),
+  ReportLocation = col_character(),
+  EmailSent = col_factor(levels = c("no", "yes"))
+))
+message("Debug - After writing CSV, AlertLevel values: ", paste(logs_df_check$AlertLevel, collapse=", "))
+message("Debug - After writing CSV, AlertLevel class: ", class(logs_df_check$AlertLevel))
 
 ## --- 7.  Save investigation + email artefacts ------------------------------
 investigate_df <- ts_all |>

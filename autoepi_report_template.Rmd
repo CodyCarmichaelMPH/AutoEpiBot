@@ -195,8 +195,9 @@ if (has(clim_stats)) {
 
 if (has(clim_tab)) {
   cat("## Climate Stations\n")
-  # Apply station name mapping if StationRaw column exists
+  # Debug: print what station IDs we're working with
   if (!is.null(clim_tab) && "StationRaw" %in% names(clim_tab)) {
+    message("Debug - Climate station IDs: ", paste(unique(clim_tab$StationRaw), collapse=", "))
     clim_tab$Station <- map_station_name(clim_tab$StationRaw)
     clim_tab_display <- clim_tab %>% select(-StationRaw)
   } else {
@@ -223,6 +224,15 @@ if (has(aqi_plot)) {
 
 if (has(aqi_stn)) {
   cat("### AQI Stations\n")
+  # Debug: print what columns are available in AQI data
+  message("Debug - AQI columns: ", paste(names(aqi_stn), collapse=", "))
+  if ("SiteName" %in% names(aqi_stn)) {
+    message("Debug - AQI SiteName values: ", paste(unique(aqi_stn$SiteName), collapse=", "))
+  }
+  if ("StationID" %in% names(aqi_stn)) {
+    message("Debug - AQI StationID values: ", paste(unique(aqi_stn$StationID), collapse=", "))
+  }
+  
   # Use SiteName as station name if available, otherwise map StationID
   if (!is.null(aqi_stn) && "SiteName" %in% names(aqi_stn)) {
     aqi_stn$StationName <- aqi_stn$SiteName
