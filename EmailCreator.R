@@ -159,6 +159,19 @@ main <- function(){
     arrange(presented_name) %>%
     select(Syndrome = presented_name, `Start Date`=StartDate, `End Date`=EndDate)
   
+  # Debug: print what's in the logs
+  message("Debug - Total rows in logs: ", nrow(logs_df))
+  message("Debug - Reports with ReportCreated='yes': ", sum(logs_df$ReportCreated == "yes", na.rm = TRUE))
+  message("Debug - Reports with HTML locations: ", sum(grepl("\\.html$", logs_df$ReportLocation), na.rm = TRUE))
+  
+  # Show some sample data
+  sample_logs <- logs_df %>%
+    filter(ReportCreated == "yes") %>%
+    select(ObvsDate, presented_name, ReportLocation, AlertLevel) %>%
+    head(5)
+  message("Debug - Sample log entries:")
+  print(sample_logs)
+  
   # Create reports table from logs
   reports_generated <- logs_df %>%
     filter(ReportCreated=="yes", 
@@ -167,6 +180,12 @@ main <- function(){
            grepl("\\.html$", ReportLocation)) %>%
     arrange(ObvsDate, presented_name) %>%
     select(Syndrome=presented_name, Date=ObvsDate, `Report Location`=ReportLocation)
+  
+  message("Debug - Reports table rows: ", nrow(reports_generated))
+  if (nrow(reports_generated) > 0) {
+    message("Debug - Reports table content:")
+    print(reports_generated)
+  }
   
   report_count <- nrow(reports_generated)
   
