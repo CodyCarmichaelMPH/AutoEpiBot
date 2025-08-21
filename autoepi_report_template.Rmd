@@ -118,7 +118,7 @@ infer_syndrome <- function(report, syn_key) {
   "Unknown Syndrome"
 }
 
-# Station name mapping function
+# Climate station name mapping function
 map_station_name <- function(station_raw) {
   station_map <- c(
     "pdt-eln" = "Ellensburg, Washington",
@@ -141,6 +141,24 @@ map_station_name <- function(station_raw) {
   # Find the matching key (also converted to lowercase for comparison)
   matched_key <- names(station_map)[tolower(names(station_map)) == station_raw_lower]
   ifelse(length(matched_key) > 0, station_map[matched_key[1]], station_raw)
+}
+
+# AQI station name mapping function
+map_aqi_station_name <- function(station_id) {
+  # AQI stations typically have numeric IDs or different naming conventions
+  # For now, return a more descriptive name based on the ID
+  # This can be expanded with actual AQI station mappings when available
+  if (is.null(station_id) || is.na(station_id)) {
+    return("Unknown Station")
+  }
+  
+  # If it's already a descriptive name, return as-is
+  if (grepl("[A-Za-z]", station_id)) {
+    return(as.character(station_id))
+  }
+  
+  # For numeric IDs, create a descriptive name
+  paste("AQI Station", as.character(station_id))
 }
 
 # Age group ordering function
@@ -239,7 +257,7 @@ if (has(aqi_stn)) {
     aqi_stn$StationName <- aqi_stn$SiteName
     aqi_stn_display <- aqi_stn
   } else if (!is.null(aqi_stn) && "StationID" %in% names(aqi_stn)) {
-    aqi_stn$StationName <- map_station_name(aqi_stn$StationID)
+    aqi_stn$StationName <- map_aqi_station_name(aqi_stn$StationID)
     aqi_stn_display <- aqi_stn
   } else {
     aqi_stn_display <- aqi_stn
