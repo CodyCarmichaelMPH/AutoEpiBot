@@ -160,7 +160,7 @@ The system uses these alert levels:
 - **Warning**: Moderate increase (colorID = 2)
 - **Alert**: Significant increase (colorID ≥ 3)
 - **False Positive**: Initially flagged but later determined to be normal
-
+- NOTE: For now, curtailed to allow for shipping; future implementation will make this displayed as an ease of eval step.
 ## Troubleshooting
 
 ### Common Issues

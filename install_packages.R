@@ -37,7 +37,11 @@ required_packages <- c(
   
   # Email (Windows only)
   "RDCOMClient", # Outlook integration (Windows)
-  "Microsoft365R" # Microsoft Graph API (alternative email)
+  "Microsoft365R", # Microsoft Graph API (alternative email)
+  
+  # Additional utilities
+  "rstudioapi", # RStudio integration (optional)
+  "tcltk"       # GUI utilities (optional)
 )
 
 # Function to install if not already installed

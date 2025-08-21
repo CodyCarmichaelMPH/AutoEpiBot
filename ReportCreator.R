@@ -330,15 +330,37 @@ for (d in sort(unique(reports_df$ObvsDate))) {
     reports[[dk]][[sk]] <- list(count = list(), per10k = list(), maps = list())
     cat("Processing", syn, "for", dk, "(", nrow(rep_s), "records)\n")
     
-    # ----- COUNT GRAPHS -----
+    # Age group ordering function
+    order_age_groups <- function(age_groups) {
+      # Define the correct order for age groups (standard epidemiological age groups)
+      age_order <- c("0-5", "6-17", "18-25", "26-34", "35-44", "45-54", "55-64", "65+", "Unknown")
+      # Filter to only include age groups that exist in the data
+      existing_ages <- intersect(age_order, age_groups)
+      # Add any remaining age groups that weren't in our predefined order
+      remaining_ages <- setdiff(age_groups, age_order)
+      c(existing_ages, remaining_ages)
+    }
+
+# ----- COUNT GRAPHS -----
     if (isTRUE(rep_set$Age_Group_Bar)) {
-      p <- plot_ly(rep_s, x = ~age_grp, type = "histogram") %>%
+      # Order age groups properly
+      age_levels <- order_age_groups(unique(rep_s$age_grp))
+      rep_s_ordered <- rep_s %>% 
+        mutate(age_grp = factor(age_grp, levels = age_levels))
+      
+      p <- plot_ly(rep_s_ordered, x = ~age_grp, type = "histogram") %>%
         layout(title = glue("Age Group Distribution - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Count"))
       store(dk, sk, "count", "age", p)
     }
     if (isTRUE(rep_set$Age_Gender_Stacked_Bar)) {
-      age_sex_data <- rep_s %>% count(age_grp, Sex, .drop = FALSE) %>% filter(!is.na(age_grp), !is.na(Sex))
+      # Order age groups properly
+      age_levels <- order_age_groups(unique(rep_s$age_grp))
+      age_sex_data <- rep_s %>% 
+        count(age_grp, Sex, .drop = FALSE) %>% 
+        filter(!is.na(age_grp), !is.na(Sex)) %>%
+        mutate(age_grp = factor(age_grp, levels = age_levels))
+      
       p <- plot_ly(age_sex_data, x = ~age_grp, y = ~n, color = ~Sex, type = "bar") %>%
         layout(title = glue("Age Group + Gender - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Count"), barmode = "stack")
@@ -373,7 +395,12 @@ for (d in sort(unique(reports_df$ObvsDate))) {
       den <- dplyr::filter(denom_d, demo == "age_grp") %>% select(level, denom)
       df  <- left_join(num, den, by = c("age_grp" = "level")) %>%
         mutate(rate = round(num / pmax(denom, 1) * 1e4, 1))
-      p <- plot_ly(df, x = ~age_grp, y = ~rate, type = "bar") %>%
+      
+      # Order age groups properly
+      age_levels <- order_age_groups(unique(df$age_grp))
+      df_ordered <- df %>% mutate(age_grp = factor(age_grp, levels = age_levels))
+      
+      p <- plot_ly(df_ordered, x = ~age_grp, y = ~rate, type = "bar") %>%
         layout(title = glue("Age Group per 10k - {syn} ({d_lbl})"),
                xaxis = list(title = "Age Group"), yaxis = list(title = "Rate per 10k"))
       store(dk, sk, "per10k", "age", p)
