@@ -134,8 +134,7 @@ map_station_name <- function(station_raw) {
     "sew-olm" = "Olympia, Washington",
     "otx-omk" = "Omak, Washington",
     "sew-bli" = "Bellingham, Washington",
-    "otx-dew" = "Deer Park, Washington",
-    "oly-sew" = "Seattle, Washington"  # Add this mapping for the actual station ID
+    "otx-dew" = "Deer Park, Washington"
   )
   # Convert input to lowercase for case-insensitive matching
   station_raw_lower <- tolower(station_raw)
