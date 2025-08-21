@@ -578,10 +578,19 @@ if (file.exists("LogsFileLoc.RData")) {
                           ReportLocation = col_character(),
                           EmailSent      = col_factor(levels = c("no","yes"))
                         ))
+    # Debug: check what dates are in reports_df
+    message("Debug - reports_df ObvsDate values: ", paste(unique(reports_df$ObvsDate), collapse=", "))
+    message("Debug - reports_df ObvsDate class: ", class(reports_df$ObvsDate))
+    
     report_combinations <- expand_grid(
       ObvsDate = unique(reports_df$ObvsDate),
       presented_name = unique(reports_df$presented_name)
     )
+    
+    # Debug: check what combinations are being created
+    message("Debug - report_combinations:")
+    print(report_combinations)
+    
     logs_df <- logs_df %>%
       mutate(
         ReportCreated = if_else(
